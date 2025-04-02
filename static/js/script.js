@@ -73,10 +73,41 @@ document.addEventListener('DOMContentLoaded', function() {
     const copyBtn = document.getElementById('copy-analysis');
     if (copyBtn) {
         copyBtn.addEventListener('click', function() {
-            const analysisText = document.getElementById('analysis-text').innerText;
-            navigator.clipboard.writeText(analysisText).then(() => {
+            // Get text from all tabs to provide comprehensive analysis
+            let fullContent = '';
+            
+            // Try to get content from each tab
+            const summaryTab = document.getElementById('summary');
+            const recyclingTab = document.getElementById('recycling');
+            const impactTab = document.getElementById('impact');
+            const fullTab = document.getElementById('full');
+            
+            if (fullTab && fullTab.querySelector('#analysis-text')) {
+                // If full analysis is available, use that
+                fullContent = fullTab.querySelector('#analysis-text').innerText;
+            } else {
+                // Otherwise compile from individual tabs
+                if (summaryTab) {
+                    fullContent += "SUMMARY:\n" + summaryTab.innerText + "\n\n";
+                }
+                if (recyclingTab) {
+                    fullContent += "RECYCLING INSTRUCTIONS:\n" + recyclingTab.innerText + "\n\n";
+                }
+                if (impactTab) {
+                    fullContent += "ENVIRONMENTAL IMPACT:\n" + impactTab.innerText + "\n\n";
+                }
+            }
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(fullContent).then(() => {
                 // Show success message
                 this.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-copy"></i> Copy analysis';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                this.innerHTML = '<i class="fas fa-times"></i> Failed to copy';
                 setTimeout(() => {
                     this.innerHTML = '<i class="fas fa-copy"></i> Copy analysis';
                 }, 2000);

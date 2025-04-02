@@ -53,6 +53,51 @@
     white-space: pre-line;
 }
 
+/* Tabbed analysis styling */
+.analysis-tabs .nav-tabs .nav-link {
+    color: var(--bs-gray-300);
+    border-color: transparent;
+    transition: all 0.2s ease;
+}
+
+.analysis-tabs .nav-tabs .nav-link.active {
+    color: var(--bs-light);
+    background-color: rgba(0, 123, 255, 0.1);
+    border-color: var(--bs-primary) var(--bs-border-color) transparent;
+    border-top-width: 2px;
+}
+
+.analysis-tabs .tab-content {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 0 0 0.375rem 0.375rem;
+}
+
+.recycling-instructions h4,
+.environmental-impact h4 {
+    font-size: 1.1rem;
+    color: var(--bs-light);
+    margin-bottom: 1rem;
+}
+
+.recycling-instructions ol,
+.environmental-impact ul {
+    padding-left: 1.5rem;
+}
+
+.recycling-instructions li,
+.environmental-impact li {
+    margin-bottom: 0.5rem;
+}
+
+/* Override bootstrap tab behavior for better dark theme compatibility */
+.nav-tabs {
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.tab-pane {
+    transition: opacity 0.15s linear;
+}
+
 /* Status styling */
 .status-pending {
     color: var(--bs-warning);

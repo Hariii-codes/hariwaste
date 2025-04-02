@@ -10,6 +10,11 @@ class WasteItem(db.Model):
     full_analysis = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # Additional analysis fields
+    recycling_instructions = db.Column(db.Text)
+    environmental_impact = db.Column(db.Text)
+    disposal_recommendations = db.Column(db.Text)
+    
     # Fields for marketplace listings
     is_listed = db.Column(db.Boolean, default=False)
     title = db.Column(db.String(100))

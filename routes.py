@@ -44,13 +44,16 @@ def register_routes(app):
                         flash(f"Analysis error: {analysis_result['error']}", "danger")
                         return render_template("index.html")
                     
-                    # Create a new waste item record in the database
+                    # Create a new waste item record in the database with additional fields
                     waste_item = WasteItem(
                         image_path=file_path.replace("static/", ""),
                         is_recyclable=analysis_result["is_recyclable"],
                         is_ewaste=analysis_result["is_ewaste"],
                         material=analysis_result["material"],
-                        full_analysis=analysis_result["full_analysis"]
+                        full_analysis=analysis_result["full_analysis"],
+                        recycling_instructions=analysis_result.get("recycling_instructions", ""),
+                        environmental_impact=analysis_result.get("environmental_impact", ""),
+                        disposal_recommendations=analysis_result.get("disposal_recommendations", "")
                     )
                     db.session.add(waste_item)
                     db.session.commit()
@@ -145,6 +148,49 @@ def register_routes(app):
     def page_not_found(e):
         return render_template("error.html", error="Page not found"), 404
     
+    @app.route("/drop-points")
+    def drop_points():
+        """Display map with waste drop points in Bangalore"""
+        # Predefined drop points in Bangalore
+        drop_points = [
+            {
+                "name": "Dry Waste Collection Center - Koramangala",
+                "lat": 12.9352,
+                "lon": 77.6245,
+                "address": "Koramangala 3rd Block, Bengaluru",
+                "types": ["Plastic", "Paper", "Glass"]
+            },
+            {
+                "name": "E-Waste Collection Center - Indiranagar",
+                "lat": 12.9784,
+                "lon": 77.6408,
+                "address": "100 Feet Road, Indiranagar, Bengaluru",
+                "types": ["E-Waste", "Batteries"]
+            },
+            {
+                "name": "Saahas Zero Waste - HSR Layout",
+                "lat": 12.9116,
+                "lon": 77.6473,
+                "address": "HSR Layout, Bengaluru",
+                "types": ["Plastic", "Paper", "Organic"]
+            },
+            {
+                "name": "ITC WOW Collection Point - Whitefield",
+                "lat": 12.9698,
+                "lon": 77.7500,
+                "address": "Whitefield, Bengaluru",
+                "types": ["Paper", "Cardboard"]
+            },
+            {
+                "name": "BBMP Recycling Center - Jayanagar",
+                "lat": 12.9250,
+                "lon": 77.5938,
+                "address": "Jayanagar 4th Block, Bengaluru",
+                "types": ["Plastic", "Metal", "Glass", "Paper"]
+            }
+        ]
+        return render_template("drop_points.html", drop_points=drop_points)
+
     @app.errorhandler(500)
     def server_error(e):
         return render_template("error.html", error="Server error"), 500

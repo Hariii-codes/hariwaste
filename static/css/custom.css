@@ -1,0 +1,67 @@
+/* Custom styles for waste management app */
+.analysis-result {
+    border-left: 4px solid var(--bs-primary);
+    padding-left: 1rem;
+}
+
+.recyclable-badge {
+    font-size: 1rem;
+}
+
+.material-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.upload-container {
+    border: 2px dashed var(--bs-secondary);
+    border-radius: 5px;
+    padding: 2rem;
+    text-align: center;
+    margin-bottom: 2rem;
+    transition: all 0.3s ease;
+}
+
+.upload-container:hover {
+    border-color: var(--bs-primary);
+}
+
+.preview-image {
+    max-height: 300px;
+    max-width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.marketplace-item {
+    transition: transform 0.2s ease;
+}
+
+.marketplace-item:hover {
+    transform: translateY(-5px);
+}
+
+.municipality-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.ai-analysis-container {
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre-line;
+}
+
+/* Status styling */
+.status-pending {
+    color: var(--bs-warning);
+}
+
+.status-accepted {
+    color: var(--bs-success);
+}
+
+.status-rejected {
+    color: var(--bs-danger);
+}

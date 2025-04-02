@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto text-center mb-4">
+        <h1 class="display-5 mb-3">
+            <i class="fas fa-recycle text-success me-2"></i>
+            Waste Analysis & Recycling
+        </h1>
+        <p class="lead">
+            Upload an image of your waste item, and our AI will analyze it to help you
+            determine if it's recyclable and connect you to the right recycling channels.
+        </p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header bg-primary bg-opacity-25">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-camera me-2"></i>
+                    Upload Waste Image
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="upload-form">
+                    <div class="upload-container">
+                        <div class="mb-3">
+                            <label for="waste-image" class="form-label">
+                                <i class="fas fa-cloud-upload-alt fs-1 d-block mb-2"></i>
+                                Select or drag an image here
+                            </label>
+                            <input type="file" class="form-control" id="waste-image" name="file" accept="image/*" required>
+                        </div>
+                    </div>
+                    
+                    <div id="image-preview-container" class="mb-3 text-center d-none">
+                        <p class="mb-2">Image Preview:</p>
+                        <img id="preview-image" src="#" alt="Preview" class="preview-image mb-3">
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary" id="upload-btn">
+                            <span id="upload-spinner" class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+                            <i class="fas fa-search me-2"></i>
+                            Analyze Item
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        {% if result %}
+            <div class="card">
+                <div class="card-header bg-info bg-opacity-25">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-robot me-2"></i>
+                        Analysis Results
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <img src="{{ image_path }}" alt="Uploaded waste" class="preview-image">
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-4">
+                        <div class="text-center">
+                            <h6>Recyclable</h6>
+                            {% if result.is_recyclable %}
+                                <span class="badge bg-success fs-6"><i class="fas fa-check me-1"></i> Yes</span>
+                            {% else %}
+                                <span class="badge bg-danger fs-6"><i class="fas fa-times me-1"></i> No</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="text-center">
+                            <h6>Material</h6>
+                            <span class="badge bg-secondary fs-6">
+                                <i class="material-icon" data-material="{{ result.material }}"></i>
+                                {{ result.material }}
+                            </span>
+                        </div>
+                        
+                        <div class="text-center">
+                            <h6>E-Waste</h6>
+                            {% if result.is_ewaste %}
+                                <span class="badge bg-warning text-dark fs-6"><i class="fas fa-laptop me-1"></i> Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary fs-6"><i class="fas fa-times me-1"></i> No</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <h6>AI Analysis:</h6>
+                            <button id="copy-analysis" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-copy"></i> Copy analysis
+                            </button>
+                        </div>
+                        <div class="ai-analysis-container p-3 bg-dark bg-opacity-25 rounded" id="analysis-text">
+                            {{ result.full_analysis }}
+                        </div>
+                    </div>
+
+                    {% if result.is_recyclable %}
+                        <div class="alert alert-success">
+                            <h6><i class="fas fa-lightbulb me-2"></i>What's next?</h6>
+                            <p>This item appears to be recyclable! Would you like to list it in the marketplace or send it to a municipal recycling program?</p>
+                            
+                            <div class="d-grid gap-2 mt-3">
+                                <a href="{{ url_for('list_item') }}" class="btn btn-success">
+                                    <i class="fas fa-store me-2"></i>List in Marketplace
+                                </a>
+                                
+                                {% if waste_item and result.material|lower == 'plastic' %}
+                                    <div class="alert alert-info mt-2 mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Plastic items will be automatically routed to the municipality for raw material processing.
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-danger">
+                            <h6><i class="fas fa-exclamation-triangle me-2"></i>Not Recyclable</h6>
+                            <p>Based on our analysis, this item is not recyclable through conventional channels. Please dispose of it according to your local waste management guidelines.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column justify-content-center align-items-center text-center p-5">
+                    <i class="fas fa-info-circle text-info fs-1 mb-3"></i>
+                    <h4>No Analysis Yet</h4>
+                    <p class="text-muted">
+                        Upload an image of your waste item on the left to get an AI-powered analysis 
+                        of its recyclability and material composition.
+                    </p>
+                    <div class="mt-3">
+                        <h6>What you can analyze:</h6>
+                        <div class="d-flex justify-content-center flex-wrap gap-2 mt-2">
+                            <span class="badge bg-secondary"><i class="fas fa-wine-bottle me-1"></i> Plastics</span>
+                            <span class="badge bg-secondary"><i class="fas fa-newspaper me-1"></i> Paper</span>
+                            <span class="badge bg-secondary"><i class="fas fa-cog me-1"></i> Metal</span>
+                            <span class="badge bg-secondary"><i class="fas fa-glass-martini me-1"></i> Glass</span>
+                            <span class="badge bg-secondary"><i class="fas fa-laptop me-1"></i> Electronics</span>
+                            <span class="badge bg-secondary"><i class="fas fa-tshirt me-1"></i> Textiles</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-success bg-opacity-25">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    How It Works
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="p-3">
+                            <i class="fas fa-camera-retro fs-1 text-primary mb-3"></i>
+                            <h5>1. Upload Image</h5>
+                            <p>Take a photo of your waste item and upload it to our system.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3">
+                            <i class="fas fa-brain fs-1 text-primary mb-3"></i>
+                            <h5>2. AI Analysis</h5>
+                            <p>Our AI analyzes the image to identify material and recyclability.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3">
+                            <i class="fas fa-recycle fs-1 text-primary mb-3"></i>
+                            <h5>3. Get Recommendations</h5>
+                            <p>Receive detailed recommendations on how to handle your waste.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3">
+                            <i class="fas fa-handshake fs-1 text-primary mb-3"></i>
+                            <h5>4. Connect with Recyclers</h5>
+                            <p>List recyclable items or send them to municipal programs.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

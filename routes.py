@@ -5,11 +5,14 @@ import re
 from io import BytesIO
 from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from werkzeug.utils import secure_filename
+from flask_login import current_user, login_required
 from app import db
-from models import WasteItem
+from models import WasteItem, DropLocation
 from gemini_service import analyze_waste
+from rewards import award_points_for_drop_off, check_achievements
 import logging
 from PIL import Image
+from datetime import datetime
 
 def register_routes(app):
     """Register all application routes"""
@@ -214,6 +217,51 @@ def register_routes(app):
         ]
         return render_template("drop_points.html", drop_points=drop_points)
 
+    @app.route("/check-in-drop-point", methods=["POST"])
+    @login_required
+    def check_in_drop_point():
+        """Handle user check-ins at drop points"""
+        if not current_user.is_authenticated:
+            flash("You must be logged in to check in at a drop point", "warning")
+            return redirect(url_for("auth.login"))
+        
+        drop_location_id = request.form.get("drop_location_id")
+        waste_type = request.form.get("waste_type")
+        notes = request.form.get("notes", "")
+        
+        if not drop_location_id or not waste_type:
+            flash("Missing required information for check-in", "danger")
+            return redirect(url_for("drop_points"))
+        
+        try:
+            # Create a new waste item for the drop-off
+            waste_item = WasteItem(
+                user_id=current_user.id,
+                material=waste_type,
+                is_dropped_off=True,
+                drop_location_id=drop_location_id,
+                drop_date=datetime.utcnow(),
+                description=notes,
+                is_recyclable=True  # Assuming items being dropped off are recyclable
+            )
+            db.session.add(waste_item)
+            db.session.commit()
+            
+            # Award points for the drop-off
+            award_points_for_drop_off(current_user.id, waste_item.id, drop_location_id)
+            
+            # Check if user has earned any achievements
+            check_achievements(current_user.id)
+            
+            flash("Thank you for your check-in! You've been awarded eco-points for your contribution.", "success")
+            
+        except Exception as e:
+            logging.error(f"Error processing check-in: {e}")
+            db.session.rollback()
+            flash("Error processing your check-in. Please try again.", "danger")
+            
+        return redirect(url_for("drop_points"))
+    
     @app.errorhandler(500)
     def server_error(e):
         return render_template("error.html", error="Server error"), 500

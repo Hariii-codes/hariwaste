@@ -2,6 +2,7 @@ import google.generativeai as genai
 import PIL.Image
 import os
 import logging
+from gemini_formatter import format_gemini_response, extract_sections_from_raw_text
 
 # Configure Google Gemini AI with API key
 api_key = os.environ.get("GEMINI_API_KEY", "AIzaSyAI-BJRT0oVhWMRie6Sjl39F1z9U2SAcnI")
@@ -167,11 +168,28 @@ def analyze_waste(image_path):
             "disposal_recommendations": disposal_recommendations
         }
         
-        return result
+        # Use our formatter to clean up the text and improve presentation
+        formatted_result = format_gemini_response(result)
+        
+        # If we have a full analysis but missing section data, try to extract it
+        if (not recycling_instructions or not environmental_impact or not disposal_recommendations) and analysis_text:
+            extracted_sections = extract_sections_from_raw_text(analysis_text)
+            
+            # Only update missing sections
+            if not formatted_result["recycling_instructions"] and extracted_sections["recycling_instructions"]:
+                formatted_result["recycling_instructions"] = extracted_sections["recycling_instructions"]
+                
+            if not formatted_result["environmental_impact"] and extracted_sections["environmental_impact"]:
+                formatted_result["environmental_impact"] = extracted_sections["environmental_impact"]
+                
+            if not formatted_result["disposal_recommendations"] and extracted_sections["disposal_recommendations"]:
+                formatted_result["disposal_recommendations"] = extracted_sections["disposal_recommendations"]
+        
+        return formatted_result
     
     except Exception as e:
         logging.error(f"Error in image analysis: {e}")
-        return {
+        error_result = {
             "error": str(e),
             "full_analysis": "Analysis failed",
             "is_recyclable": False,
@@ -181,3 +199,6 @@ def analyze_waste(image_path):
             "environmental_impact": "Could not analyze the image.",
             "disposal_recommendations": "Could not analyze the image."
         }
+        
+        # Format the error result to ensure consistent output format
+        return format_gemini_response(error_result)

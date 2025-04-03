@@ -67,12 +67,23 @@
                                     {% endfor %}
                                 </td>
                                 <td>
-                                    <button class="btn btn-sm btn-info center-map" 
-                                            data-lat="{{ point.lat }}" 
-                                            data-lon="{{ point.lon }}"
-                                            data-name="{{ point.name }}">
-                                        <i class="fas fa-map-pin me-1"></i> Show on Map
-                                    </button>
+                                    <div class="d-flex flex-column flex-md-row gap-2">
+                                        <button class="btn btn-sm btn-info center-map" 
+                                                data-lat="{{ point.lat }}" 
+                                                data-lon="{{ point.lon }}"
+                                                data-name="{{ point.name }}">
+                                            <i class="fas fa-map-pin me-1"></i> Show on Map
+                                        </button>
+                                        {% if current_user.is_authenticated %}
+                                        <button class="btn btn-sm btn-success check-in-btn" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#checkInModal"
+                                                data-location-id="{{ loop.index }}"
+                                                data-location-name="{{ point.name }}">
+                                            <i class="fas fa-check-circle me-1"></i> Check In
+                                        </button>
+                                        {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -84,6 +95,67 @@
     </div>
 </div>
 {% endblock %}
+
+<!-- Check-in Modal -->
+{% if current_user.is_authenticated %}
+<div class="modal fade" id="checkInModal" tabindex="-1" aria-labelledby="checkInModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="checkInModalLabel"><i class="fas fa-check-circle me-2"></i>Check-in at Drop Point</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="location-info mb-4">
+                    <h5 id="location-name" class="mb-3"></h5>
+                    <p class="text-muted">You're checking in at this waste drop point. What type of waste are you dropping off today?</p>
+                </div>
+                
+                <form id="check-in-form" method="POST" action="{{ url_for('check_in_drop_point') }}">
+                    <input type="hidden" id="location-id-input" name="drop_location_id" value="">
+                    
+                    <div class="mb-3">
+                        <label for="waste-type" class="form-label">Waste Type</label>
+                        <select class="form-select" id="waste-type" name="waste_type" required>
+                            <option value="" selected disabled>Select waste type</option>
+                            <option value="plastic">Plastic</option>
+                            <option value="paper">Paper</option>
+                            <option value="glass">Glass</option>
+                            <option value="metal">Metal</option>
+                            <option value="e-waste">E-Waste</option>
+                            <option value="textile">Textile</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes (optional)</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Any additional notes about your waste drop-off..."></textarea>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="verify-location" name="verify_location" required>
+                        <label class="form-check-label" for="verify-location">
+                            I confirm that I'm physically at this location
+                        </label>
+                    </div>
+                </form>
+                
+                <div class="alert alert-primary">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Earn rewards!</strong> You'll receive <span class="text-success">15 eco-points</span> for checking in and properly disposing of your waste.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-success" form="check-in-form">
+                    <i class="fas fa-check me-1"></i> Confirm Check-in
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% block extra_js %}
 <script>
@@ -273,6 +345,59 @@
                 alert('No drop points found matching your search.');
             }
         }
+        
+        // Handle check-in button clicks
+        {% if current_user.is_authenticated %}
+        const checkInModal = document.getElementById('checkInModal');
+        if (checkInModal) {
+            const locationNameElem = document.getElementById('location-name');
+            const locationIdInput = document.getElementById('location-id-input');
+            
+            // Set location info in the modal when it opens
+            document.querySelectorAll('.check-in-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const locationId = this.getAttribute('data-location-id');
+                    const locationName = this.getAttribute('data-location-name');
+                    
+                    locationNameElem.textContent = locationName;
+                    locationIdInput.value = locationId;
+                });
+            });
+            
+            // Reset form when modal is closed
+            checkInModal.addEventListener('hidden.bs.modal', function() {
+                document.getElementById('check-in-form').reset();
+            });
+            
+            // Verify user location when checking in (optional enhancement)
+            document.getElementById('verify-location').addEventListener('change', function() {
+                if (this.checked) {
+                    // Check if geolocation is available
+                    if (navigator.geolocation) {
+                        const spinnerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Verifying...';
+                        const originalLabel = this.nextElementSibling.innerHTML;
+                        this.nextElementSibling.innerHTML = spinnerHTML;
+                        
+                        // Get user's current location
+                        navigator.geolocation.getCurrentPosition(
+                            function(position) {
+                                // Successfully got location
+                                document.querySelector('label[for="verify-location"]').innerHTML = 
+                                    '<i class="fas fa-check-circle text-success me-1"></i> Location verified!';
+                            },
+                            function(error) {
+                                // Failed to get location
+                                console.error('Geolocation error:', error);
+                                document.getElementById('verify-location').checked = false;
+                                document.querySelector('label[for="verify-location"]').innerHTML = originalLabel;
+                                alert('Unable to verify your location. Please check your browser permissions.');
+                            }
+                        );
+                    }
+                }
+            });
+        }
+        {% endif %}
     });
 </script>
 {% endblock %}

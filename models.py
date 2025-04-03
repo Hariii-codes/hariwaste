@@ -54,6 +54,9 @@ class WasteItem(db.Model):
     environmental_impact = db.Column(db.Text)
     disposal_recommendations = db.Column(db.Text)
     
+    # Material detection results (stored as JSON string)
+    _material_detection = db.Column('material_detection', db.Text, nullable=True)
+    
     # Fields for marketplace listings
     is_listed = db.Column(db.Boolean, default=False)
     title = db.Column(db.String(100))
@@ -74,6 +77,21 @@ class WasteItem(db.Model):
     # Blockchain-like journey tracking
     recycling_completed = db.Column(db.Boolean, default=False)
     recycling_completion_date = db.Column(db.DateTime, nullable=True)
+    
+    @property
+    def material_detection(self):
+        """Getter: Deserialize JSON string to Python dictionary"""
+        if self._material_detection:
+            return json.loads(self._material_detection)
+        return None
+    
+    @material_detection.setter
+    def material_detection(self, value):
+        """Setter: Serialize Python dictionary to JSON string"""
+        if value is not None:
+            self._material_detection = json.dumps(value)
+        else:
+            self._material_detection = None
 
     def __repr__(self):
         return f"<WasteItem {self.id}: {'Recyclable' if self.is_recyclable else 'Non-Recyclable'}>"

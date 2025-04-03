@@ -3,14 +3,18 @@ import PIL.Image
 import os
 import logging
 from gemini_formatter import format_gemini_response, extract_sections_from_raw_text
+import material_detection
 
 # Configure Google Gemini AI with API key
 api_key = os.environ.get("GEMINI_API_KEY", "AIzaSyAI-BJRT0oVhWMRie6Sjl39F1z9U2SAcnI")
 genai.configure(api_key=api_key)
 
+# Flag to enable/disable material detection
+ENABLE_MATERIAL_DETECTION = True
+
 def analyze_waste(image_path):
     """
-    Analyze waste image using Google Gemini AI
+    Analyze waste image using Google Gemini AI and material detection
     
     Args:
         image_path: Path to the uploaded image
@@ -25,13 +29,61 @@ def analyze_waste(image_path):
         # Convert to RGB if needed
         if image.mode != 'RGB':
             image = image.convert('RGB')
+            
+        # Run material detection if enabled
+        material_detection_result = None
+        if ENABLE_MATERIAL_DETECTION:
+            try:
+                material_detection_result = material_detection.detect_material(image_path)
+                logging.info(f"Material detection result: {material_detection_result}")
+            except Exception as e:
+                logging.error(f"Error in material detection: {e}")
+                material_detection_result = None
         
         # Configure the model
         model = genai.GenerativeModel('gemini-1.5-flash')
         
+        # Add detected material information to the prompt if available
+        material_info = ""
+        if material_detection_result and not material_detection_result.get('error'):
+            # Extract dominant colors for additional color analysis
+            dominant_colors = []
+            try:
+                dominant_colors = material_detection.extract_dominant_colors(image_path, 3)
+            except Exception as e:
+                logging.error(f"Error extracting dominant colors: {e}")
+            
+            primary_material = material_detection_result.get('primary_material', 'unknown')
+            recyclability = material_detection_result.get('recyclability_score', 0)
+            is_recyclable = recyclability > 50
+            
+            # Format material composition information
+            composition_info = ""
+            if 'composition' in material_detection_result:
+                for material, data in material_detection_result['composition'].items():
+                    composition_info += f"  - {material.capitalize()}: {data['percentage']}% (confidence: {data['confidence']:.2f})\n"
+            
+            # Format color information
+            color_info = ""
+            if dominant_colors:
+                for i, color in enumerate(dominant_colors[:3], 1):
+                    color_info += f"  - Color {i}: RGB({color[0]}, {color[1]}, {color[2]})\n"
+            
+            material_info = f"""
+            I've performed an initial computer vision analysis of the image and detected the following:
+            - Primary material: {primary_material.capitalize()}
+            - Material composition:\n{composition_info}
+            - Is recyclable: {'Likely' if is_recyclable else 'Unlikely'} (score: {recyclability}%)
+            - Dominant colors:\n{color_info}
+            - Analysis method: {material_detection_result.get('analysis_method', 'unknown')}
+            
+            Please consider this information in your analysis, but use your own judgment if you disagree.
+            """
+        
         # Generate content with a detailed prompt
         prompt = (
             "You are WasteWorks AI Assistant, a specialized waste management analysis expert with deep knowledge of recycling processes, material science, and environmental impacts.\n\n"
+            f"{material_info}\n\n"
             "Analyze this waste image in detail and provide the following information in a well-structured, clear format with HTML formatting:\n\n"
             "1. Is it recyclable? (Yes/No) - Provide a confident answer and explain your reasoning in detail. Consider regional variation in recyclability.\n"
             "2. Is it e-waste? (Yes/No) - Provide a confident answer and explain why it is or isn't electronic waste. Include information about hazardous components if present.\n"
@@ -167,6 +219,10 @@ def analyze_waste(image_path):
             "environmental_impact": environmental_impact,
             "disposal_recommendations": disposal_recommendations
         }
+        
+        # Include material detection results if available
+        if material_detection_result and not material_detection_result.get('error'):
+            result["material_detection"] = material_detection_result
         
         # Use our formatter to clean up the text and improve presentation
         formatted_result = format_gemini_response(result)

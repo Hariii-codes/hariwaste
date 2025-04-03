@@ -85,6 +85,10 @@ def register_routes(app):
                     environmental_impact=analysis_result.get("environmental_impact", ""),
                     disposal_recommendations=analysis_result.get("disposal_recommendations", "")
                 )
+                
+                # Add material detection results if available
+                if "material_detection" in analysis_result:
+                    waste_item.material_detection = analysis_result["material_detection"]
                 db.session.add(waste_item)
                 db.session.commit()
                 

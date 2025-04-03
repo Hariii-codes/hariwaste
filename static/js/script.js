@@ -1,6 +1,28 @@
 // Script for waste management application
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Toggle between upload and webcam options
+    const optionUpload = document.getElementById('option-upload');
+    const optionWebcam = document.getElementById('option-webcam');
+    const uploadContainer = document.getElementById('upload-container');
+    const webcamContainer = document.getElementById('webcam-option-container');
+    
+    if (optionUpload && optionWebcam) {
+        optionUpload.addEventListener('change', function() {
+            if (this.checked) {
+                uploadContainer.classList.remove('d-none');
+                webcamContainer.classList.add('d-none');
+            }
+        });
+        
+        optionWebcam.addEventListener('change', function() {
+            if (this.checked) {
+                uploadContainer.classList.add('d-none');
+                webcamContainer.classList.remove('d-none');
+            }
+        });
+    }
+    
     // File upload preview
     const fileInput = document.getElementById('waste-image');
     const previewContainer = document.getElementById('image-preview-container');

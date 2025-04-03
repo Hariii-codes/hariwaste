@@ -1,4 +1,30 @@
 /* Custom styles for waste management app */
+
+/* Webcam styles */
+#webcam-video {
+    width: 100%;
+    border-radius: 8px;
+    background-color: #000;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+#webcam-canvas {
+    display: none;
+}
+
+.capture-options {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.webcam-btn {
+    transition: all 0.2s ease;
+}
+
+.webcam-btn:hover {
+    transform: scale(1.05);
+}
 .analysis-result {
     border-left: 4px solid var(--bs-primary);
     padding-left: 1rem;

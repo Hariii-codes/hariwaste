@@ -25,21 +25,66 @@
             </div>
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data" id="upload-form">
-                    <div class="upload-container">
+                    <!-- Image Capture Options -->
+                    <div class="mb-4">
+                        <div class="btn-group w-100" role="group" aria-label="Capture options">
+                            <input type="radio" class="btn-check" name="capture-option" id="option-upload" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="option-upload">
+                                <i class="fas fa-upload me-2"></i>Upload Image
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="capture-option" id="option-webcam" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="option-webcam">
+                                <i class="fas fa-camera me-2"></i>Use Webcam
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- File Upload Option -->
+                    <div id="upload-container" class="upload-container">
                         <div class="mb-3">
                             <label for="waste-image" class="form-label">
                                 <i class="fas fa-cloud-upload-alt fs-1 d-block mb-2"></i>
                                 Select or drag an image here
                             </label>
-                            <input type="file" class="form-control" id="waste-image" name="file" accept="image/*" required>
+                            <input type="file" class="form-control" id="waste-image" name="file" accept="image/*">
                         </div>
                     </div>
                     
+                    <!-- Webcam Option -->
+                    <div id="webcam-option-container" class="d-none">
+                        <div id="webcam-alerts"></div>
+                        
+                        <button type="button" id="start-webcam" class="btn btn-outline-primary d-block w-100 mb-3">
+                            <i class="fas fa-video me-2"></i>Start Camera
+                        </button>
+                        
+                        <div id="webcam-container" class="d-none mb-3">
+                            <div class="position-relative">
+                                <video id="webcam-video" class="w-100 rounded" playsinline></video>
+                                <div class="position-absolute top-0 end-0 p-2">
+                                    <button type="button" id="close-webcam" class="btn btn-sm btn-danger d-none">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" id="capture-image" class="btn btn-success d-none w-100 mt-2">
+                                <i class="fas fa-camera me-2"></i>Capture Image
+                            </button>
+                            <canvas id="webcam-canvas" class="d-none"></canvas>
+                        </div>
+                        
+                        <!-- Hidden input for webcam image data -->
+                        <input type="hidden" id="webcam-image-data" name="webcam_image">
+                    </div>
+                    
+                    <!-- Image Preview (shared between upload and webcam) -->
                     <div id="image-preview-container" class="mb-3 text-center d-none">
                         <p class="mb-2">Image Preview:</p>
                         <img id="preview-image" src="#" alt="Preview" class="preview-image mb-3">
                     </div>
                     
+                    <!-- Analysis Button -->
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary" id="upload-btn">
                             <span id="upload-spinner" class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>

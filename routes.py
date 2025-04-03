@@ -1,73 +1,96 @@
 import os
 import uuid
+import base64
+import re
+from io import BytesIO
 from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from werkzeug.utils import secure_filename
 from app import db
 from models import WasteItem
 from gemini_service import analyze_waste
 import logging
+from PIL import Image
 
 def register_routes(app):
     """Register all application routes"""
     
     @app.route("/", methods=["GET", "POST"])
     def index():
-        """Handle home page and waste image uploads"""
+        """Handle home page and waste image uploads from file or webcam"""
         result = None
         image_path = None
         waste_item = None
         
         if request.method == "POST":
-            if "file" not in request.files:
-                flash("No file uploaded", "danger")
+            # Check if we have a file upload or webcam image
+            file_upload = "file" in request.files and request.files["file"].filename != ""
+            webcam_upload = "webcam_image" in request.form and request.form["webcam_image"] and request.form["webcam_image"] != ""
+            
+            if not file_upload and not webcam_upload:
+                flash("No image provided. Please upload an image or use the webcam.", "danger")
                 return redirect(request.url)
             
-            file = request.files["file"]
-            if file.filename == "":
-                flash("No selected file", "danger")
-                return redirect(request.url)
-            
-            if file:
-                try:
-                    # Generate unique filename to prevent overwrites
-                    filename = secure_filename(file.filename)
-                    filename = f"{uuid.uuid4()}_{filename}"
-                    file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-                    
-                    # Save the uploaded file
+            try:
+                # Generate a unique filename
+                filename = f"{uuid.uuid4()}.jpg"
+                file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+                
+                # Process either file upload or webcam image
+                if file_upload:
+                    # Regular file upload
+                    file = request.files["file"]
                     file.save(file_path)
                     
-                    # Analyze the image using Gemini AI
-                    analysis_result = analyze_waste(file_path)
+                elif webcam_upload:
+                    # Process webcam image (data URL)
+                    webcam_data = request.form["webcam_image"]
+                    # Extract the base64 data from the data URL
+                    # Format typically: data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...
+                    image_data = re.sub('^data:image/.+;base64,', '', webcam_data)
                     
-                    if "error" in analysis_result:
-                        flash(f"Analysis error: {analysis_result['error']}", "danger")
-                        return render_template("index.html")
+                    # Decode and save as image file
+                    decoded_image = base64.b64decode(image_data)
+                    with open(file_path, "wb") as f:
+                        f.write(decoded_image)
                     
-                    # Create a new waste item record in the database with additional fields
-                    waste_item = WasteItem(
-                        image_path=file_path.replace("static/", ""),
-                        is_recyclable=analysis_result["is_recyclable"],
-                        is_ewaste=analysis_result["is_ewaste"],
-                        material=analysis_result["material"],
-                        full_analysis=analysis_result["full_analysis"],
-                        recycling_instructions=analysis_result.get("recycling_instructions", ""),
-                        environmental_impact=analysis_result.get("environmental_impact", ""),
-                        disposal_recommendations=analysis_result.get("disposal_recommendations", "")
-                    )
-                    db.session.add(waste_item)
-                    db.session.commit()
-                    
-                    # Store the waste item ID in session for listing form
-                    session["last_analyzed_item_id"] = waste_item.id
-                    
-                    # Set display paths
-                    image_path = "/" + file_path
-                    result = analysis_result
-                    
-                except Exception as e:
-                    logging.error(f"Error processing upload: {e}")
-                    flash(f"Error processing upload: {str(e)}", "danger")
+                    # For some browsers, we might need to rotate the image based on EXIF data
+                    try:
+                        with Image.open(file_path) as img:
+                            img.save(file_path)
+                    except Exception as img_e:
+                        logging.warning(f"Error processing webcam image: {img_e}")
+                
+                # Analyze the image using Gemini AI
+                analysis_result = analyze_waste(file_path)
+                
+                if "error" in analysis_result:
+                    flash(f"Analysis error: {analysis_result['error']}", "danger")
+                    return render_template("index.html")
+                
+                # Create a new waste item record in the database with additional fields
+                waste_item = WasteItem(
+                    image_path=file_path.replace("static/", ""),
+                    is_recyclable=analysis_result["is_recyclable"],
+                    is_ewaste=analysis_result["is_ewaste"],
+                    material=analysis_result["material"],
+                    full_analysis=analysis_result["full_analysis"],
+                    recycling_instructions=analysis_result.get("recycling_instructions", ""),
+                    environmental_impact=analysis_result.get("environmental_impact", ""),
+                    disposal_recommendations=analysis_result.get("disposal_recommendations", "")
+                )
+                db.session.add(waste_item)
+                db.session.commit()
+                
+                # Store the waste item ID in session for listing form
+                session["last_analyzed_item_id"] = waste_item.id
+                
+                # Set display paths
+                image_path = "/" + file_path
+                result = analysis_result
+                
+            except Exception as e:
+                logging.error(f"Error processing image: {e}")
+                flash(f"Error processing image: {str(e)}", "danger")
         
         return render_template("index.html", result=result, image_path=image_path, waste_item=waste_item)
     

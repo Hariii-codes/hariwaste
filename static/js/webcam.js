@@ -1,0 +1,179 @@
+// Webcam handling for WasteWorks application
+
+class WebcamCapture {
+    constructor(videoElement, canvasElement, startButton, captureButton, closeButton) {
+        this.video = videoElement;
+        this.canvas = canvasElement;
+        this.startButton = startButton;
+        this.captureButton = captureButton;
+        this.closeButton = closeButton;
+        this.stream = null;
+        this.capturedImage = null;
+        
+        // Bind methods to this instance
+        this.start = this.start.bind(this);
+        this.capture = this.capture.bind(this);
+        this.stop = this.stop.bind(this);
+        
+        // Set up event listeners
+        if (this.startButton) {
+            this.startButton.addEventListener('click', this.start);
+        }
+        if (this.captureButton) {
+            this.captureButton.addEventListener('click', this.capture);
+        }
+        if (this.closeButton) {
+            this.closeButton.addEventListener('click', this.stop);
+        }
+    }
+    
+    async start() {
+        try {
+            // Request access to the webcam
+            this.stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: 'environment', // Prefer back camera on mobile
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            });
+            
+            // Connect the stream to the video element
+            this.video.srcObject = this.stream;
+            this.video.play();
+            
+            // Show the webcam container
+            const webcamContainer = document.getElementById('webcam-container');
+            if (webcamContainer) {
+                webcamContainer.classList.remove('d-none');
+            }
+            
+            // Hide the start button, show capture and close buttons
+            if (this.startButton) this.startButton.classList.add('d-none');
+            if (this.captureButton) this.captureButton.classList.remove('d-none');
+            if (this.closeButton) this.closeButton.classList.remove('d-none');
+            
+        } catch (error) {
+            console.error('Error accessing webcam:', error);
+            alert('Could not access your camera. Please make sure you have a camera connected and have granted permission to use it.');
+        }
+    }
+    
+    capture() {
+        if (!this.stream) return;
+        
+        const context = this.canvas.getContext('2d');
+        
+        // Set canvas dimensions to match video
+        this.canvas.width = this.video.videoWidth;
+        this.canvas.height = this.video.videoHeight;
+        
+        // Draw the current video frame to the canvas
+        context.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+        
+        // Get the image data from the canvas
+        this.capturedImage = this.canvas.toDataURL('image/jpeg');
+        
+        // Display the image preview
+        const previewContainer = document.getElementById('image-preview-container');
+        const previewImage = document.getElementById('preview-image');
+        
+        if (previewImage && previewContainer) {
+            previewImage.src = this.capturedImage;
+            previewContainer.classList.remove('d-none');
+        }
+        
+        // Add the image data to a hidden input
+        const imageDataInput = document.getElementById('webcam-image-data');
+        if (imageDataInput) {
+            imageDataInput.value = this.capturedImage;
+        }
+        
+        // Stop the webcam
+        this.stop();
+        
+        // Show a success message
+        const captureAlert = document.createElement('div');
+        captureAlert.className = 'alert alert-success mt-2';
+        captureAlert.innerHTML = '<i class="fas fa-check-circle me-2"></i>Image captured successfully. You can now analyze it or retake.';
+        
+        const alertContainer = document.getElementById('webcam-alerts');
+        if (alertContainer) {
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(captureAlert);
+            setTimeout(() => {
+                captureAlert.remove();
+            }, 3000);
+        }
+    }
+    
+    stop() {
+        if (this.stream) {
+            // Stop all tracks in the stream
+            this.stream.getTracks().forEach(track => track.stop());
+            this.stream = null;
+            
+            // Reset video source
+            this.video.srcObject = null;
+            
+            // Hide the webcam container
+            const webcamContainer = document.getElementById('webcam-container');
+            if (webcamContainer) {
+                webcamContainer.classList.add('d-none');
+            }
+            
+            // Show the start button, hide capture and close buttons
+            if (this.startButton) this.startButton.classList.remove('d-none');
+            if (this.captureButton) this.captureButton.classList.add('d-none');
+            if (this.closeButton) this.closeButton.classList.add('d-none');
+        }
+    }
+    
+    getImageData() {
+        return this.capturedImage;
+    }
+}
+
+// Initialize when document is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    const videoElement = document.getElementById('webcam-video');
+    const canvasElement = document.getElementById('webcam-canvas');
+    const startButton = document.getElementById('start-webcam');
+    const captureButton = document.getElementById('capture-image');
+    const closeButton = document.getElementById('close-webcam');
+    
+    if (videoElement && canvasElement) {
+        // Check if browser supports getUserMedia
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            // Create webcam instance
+            window.webcamCapture = new WebcamCapture(
+                videoElement,
+                canvasElement,
+                startButton,
+                captureButton,
+                closeButton
+            );
+            
+            // Enable webcam button
+            if (startButton) {
+                startButton.disabled = false;
+            }
+        } else {
+            console.error('getUserMedia is not supported in this browser');
+            // Disable webcam button and show error message
+            if (startButton) {
+                startButton.disabled = true;
+                startButton.title = 'Webcam not supported in this browser';
+                
+                const alertElement = document.createElement('div');
+                alertElement.className = 'alert alert-warning mt-2';
+                alertElement.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Webcam is not supported in your browser. Please use a modern browser or upload an image.';
+                
+                const alertContainer = document.getElementById('webcam-alerts');
+                if (alertContainer) {
+                    alertContainer.appendChild(alertElement);
+                }
+            }
+        }
+    }
+});

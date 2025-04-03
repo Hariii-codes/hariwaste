@@ -1,4 +1,6 @@
 from datetime import datetime
+import hashlib
+import json
 from app import db, bcrypt
 from flask_login import UserMixin
 
@@ -68,6 +70,10 @@ class WasteItem(db.Model):
     is_dropped_off = db.Column(db.Boolean, default=False)
     drop_location_id = db.Column(db.Integer, db.ForeignKey('drop_location.id'), nullable=True)
     drop_date = db.Column(db.DateTime, nullable=True)
+    
+    # Blockchain-like journey tracking
+    recycling_completed = db.Column(db.Boolean, default=False)
+    recycling_completion_date = db.Column(db.DateTime, nullable=True)
 
     def __repr__(self):
         return f"<WasteItem {self.id}: {'Recyclable' if self.is_recyclable else 'Non-Recyclable'}>"
@@ -126,3 +132,107 @@ class Reward(db.Model):
     
     def __repr__(self):
         return f"<Reward {self.id}: {self.points} points for {self.reward_type}>"
+
+
+class WasteJourneyBlock(db.Model):
+    """
+    A block in the blockchain-like waste tracking system.
+    Each block represents a stage in the waste item's journey from drop-off to recycling.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    waste_item_id = db.Column(db.Integer, db.ForeignKey('waste_item.id'), nullable=False)
+    
+    # Block data
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    stage = db.Column(db.String(50), nullable=False)  # 'drop_off', 'collection', 'sorting', 'processing', 'recycling'
+    location = db.Column(db.String(255))
+    details = db.Column(db.Text)
+    verified_by = db.Column(db.String(100))  # Who verified this stage
+    
+    # Blockchain properties
+    previous_hash = db.Column(db.String(64), nullable=True)  # Hash of the previous block
+    block_hash = db.Column(db.String(64), nullable=False)  # Hash of this block
+    nonce = db.Column(db.Integer, default=0)  # For proof of work simulation
+    
+    # Relationships
+    waste_item = db.relationship('WasteItem', backref='journey_blocks', lazy=True)
+    
+    def __init__(self, waste_item_id, stage, location, details, verified_by, previous_hash=None):
+        self.waste_item_id = waste_item_id
+        self.stage = stage
+        self.location = location
+        self.details = details
+        self.verified_by = verified_by
+        self.previous_hash = previous_hash
+        self.nonce = 0
+        
+        # Calculate block hash on creation
+        self.block_hash = self.calculate_hash()
+    
+    def calculate_hash(self):
+        """Calculate the hash of this block based on its contents"""
+        block_data = {
+            'waste_item_id': self.waste_item_id,
+            'timestamp': str(self.timestamp),
+            'stage': self.stage,
+            'location': self.location,
+            'details': self.details,
+            'verified_by': self.verified_by,
+            'previous_hash': self.previous_hash,
+            'nonce': self.nonce
+        }
+        
+        # Convert the data to a JSON string and hash it
+        block_string = json.dumps(block_data, sort_keys=True)
+        return hashlib.sha256(block_string.encode()).hexdigest()
+    
+    def mine_block(self, difficulty=2):
+        """Simulate proof of work by finding a hash with leading zeros"""
+        target = '0' * difficulty
+        
+        while self.block_hash[:difficulty] != target:
+            self.nonce += 1
+            self.block_hash = self.calculate_hash()
+        
+        return self.block_hash
+    
+    def is_valid(self):
+        """Verify that the block's hash is valid"""
+        return self.block_hash == self.calculate_hash()
+    
+    def __repr__(self):
+        return f"<WasteJourneyBlock {self.id}: {self.stage} for waste_item_id={self.waste_item_id}>"
+
+
+class InfrastructureReport(db.Model):
+    """
+    Reports of damaged infrastructure submitted by users through webcam photos.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Report details
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    category = db.Column(db.String(50), nullable=False)  # 'road', 'street_light', 'water_pipe', 'garbage_bin', etc.
+    severity = db.Column(db.String(20), nullable=False)  # 'low', 'medium', 'high', 'critical'
+    
+    # Location details
+    location_description = db.Column(db.String(255), nullable=False)
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+    
+    # Image and timestamps
+    image_path = db.Column(db.String(255), nullable=False)
+    reported_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Status tracking
+    status = db.Column(db.String(20), default='pending')  # 'pending', 'under_review', 'in_progress', 'resolved', 'rejected'
+    status_updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    municipality_notes = db.Column(db.Text)
+    
+    # Relationships
+    user = db.relationship('User', backref=db.backref('infrastructure_reports', lazy=True))
+    
+    def __repr__(self):
+        return f"<InfrastructureReport {self.id}: {self.title} ({self.status})>"

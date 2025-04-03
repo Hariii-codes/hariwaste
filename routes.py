@@ -14,6 +14,10 @@ import logging
 from PIL import Image
 from datetime import datetime
 
+# Import the route modules for our new features
+from tracking import register_tracking_routes
+from infrastructure import register_infrastructure_routes
+
 def register_routes(app):
     """Register all application routes"""
     
@@ -265,3 +269,7 @@ def register_routes(app):
     @app.errorhandler(500)
     def server_error(e):
         return render_template("error.html", error="Server error"), 500
+        
+    # Register routes for our new features
+    register_tracking_routes(app)
+    register_infrastructure_routes(app)

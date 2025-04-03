@@ -198,6 +198,13 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-3">
+                    {% if current_user.is_authenticated and item.user_id == current_user.id %}
+                    <a href="{{ url_for('track_waste', item_id=item.id) }}" class="btn btn-outline-info">
+                        <i class="fas fa-link me-2"></i>
+                        Track Waste Journey
+                    </a>
+                    {% endif %}
+                    
                     <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
                         <i class="fas fa-camera me-2"></i>
                         Analyze Another Item

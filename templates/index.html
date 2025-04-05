@@ -181,11 +181,17 @@
                                 <div class="tab-pane fade show active" id="summary" role="tabpanel" aria-labelledby="summary-tab">
                                     <div class="card border-0 bg-transparent">
                                         <div class="card-body p-0">
-                                            <h6>Material: <span class="badge bg-info">{{ result.material }}</span></h6>
-                                            <div class="mt-3">
-                                                <h6>Best Disposal Method:</h6>
-                                                <p>{{ result.disposal_recommendations|truncate(150) }}</p>
-                                            </div>
+                                            {% if result.summary %}
+                                                <div class="item-summary">
+                                                    {{ result.summary|safe }}
+                                                </div>
+                                            {% else %}
+                                                <h6>Material: <span class="badge bg-info">{{ result.material }}</span></h6>
+                                                <div class="mt-3">
+                                                    <h6>Best Disposal Method:</h6>
+                                                    <p>{{ result.disposal_recommendations|truncate(150) }}</p>
+                                                </div>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>

@@ -124,6 +124,17 @@
     transition: opacity 0.15s linear;
 }
 
+/* Item summary styling */
+.item-summary {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+.item-summary {
+    white-space: pre-line;
+}
+
 /* Status styling */
 .status-pending {
     color: var(--bs-warning);
@@ -135,4 +146,12 @@
 
 .status-rejected {
     color: var(--bs-danger);
+}
+
+/* Item summary styling */
+.item-summary {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    white-space: pre-line;
 }

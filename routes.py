@@ -80,6 +80,7 @@ def register_routes(app):
                     is_recyclable=analysis_result["is_recyclable"],
                     is_ewaste=analysis_result["is_ewaste"],
                     material=analysis_result["material"],
+                    summary=analysis_result.get("summary", ""),
                     full_analysis=analysis_result["full_analysis"],
                     recycling_instructions=analysis_result.get("recycling_instructions", ""),
                     environmental_impact=analysis_result.get("environmental_impact", ""),

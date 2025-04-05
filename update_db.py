@@ -20,6 +20,9 @@ def update_waste_item_table():
             # Add recycling_completion_date column if it doesn't exist
             conn.execute(text('ALTER TABLE waste_item ADD COLUMN IF NOT EXISTS recycling_completion_date TIMESTAMP;'))
             
+            # Add summary column if it doesn't exist
+            conn.execute(text('ALTER TABLE waste_item ADD COLUMN IF NOT EXISTS summary TEXT;'))
+            
             conn.commit()
         print("Table schema updated successfully.")
 

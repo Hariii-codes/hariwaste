@@ -50,6 +50,7 @@ class WasteItem(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     
     # Additional analysis fields
+    summary = db.Column(db.Text)
     recycling_instructions = db.Column(db.Text)
     environmental_impact = db.Column(db.Text)
     disposal_recommendations = db.Column(db.Text)

@@ -70,6 +70,43 @@ def format_gemini_response(response_dict):
         text = re.sub(r'^(Disposal Recommendations:|Best Disposal Method:)\s*', '', text, flags=re.IGNORECASE)
         formatted['disposal_recommendations'] = text
     
+    # Generate summary based on available information if not already there
+    if not response_dict.get('summary') and response_dict.get('full_analysis'):
+        # Get material information
+        material_type = "Unknown"
+        if response_dict.get('material'):
+            material_type = response_dict.get('material')
+        elif 'material_detection' in response_dict and response_dict['material_detection'].get('primary_material'):
+            material_type = response_dict['material_detection']['primary_material'].capitalize()
+            
+        # Determine item description from full analysis
+        full_analysis_lower = response_dict.get('full_analysis', '').lower()
+        item_description = "Waste item"
+        if "bottle" in full_analysis_lower:
+            item_description = "Plastic bottle"
+        elif "container" in full_analysis_lower:
+            item_description = "Container"
+        elif "packaging" in full_analysis_lower:
+            item_description = "Packaging material"
+        elif "bag" in full_analysis_lower:
+            item_description = "Bag"
+        elif "cup" in full_analysis_lower:
+            item_description = "Cup"
+        elif "box" in full_analysis_lower:
+            item_description = "Box"
+        elif "device" in full_analysis_lower or "electronic" in full_analysis_lower:
+            item_description = "Electronic device"
+        
+        # Determine recyclability
+        recyclable = "Not recyclable"
+        if response_dict.get('is_recyclable'):
+            recyclable = "Recyclable"
+            
+        # Create bullet point summary
+        formatted['summary'] = f"• The image shows a {item_description}.\n• It is primarily made of {material_type}.\n• This item is {recyclable}."
+    elif 'summary' in response_dict:
+        formatted['summary'] = response_dict['summary']
+    
     return formatted
 
 def extract_sections_from_raw_text(raw_text):
@@ -88,7 +125,8 @@ def extract_sections_from_raw_text(raw_text):
         "full_analysis": raw_text,
         "recycling_instructions": "",
         "environmental_impact": "",
-        "disposal_recommendations": ""
+        "disposal_recommendations": "",
+        "summary": ""
     }
     
     # Extract recycling instructions
@@ -117,5 +155,47 @@ def extract_sections_from_raw_text(raw_text):
     )
     if disposal_match:
         result["disposal_recommendations"] = disposal_match.group(1).strip()
+    
+    # Create a concise summary in bullet points
+    material_type = ""
+    if "plastic" in raw_text.lower():
+        material_type = "Plastic"
+    elif "paper" in raw_text.lower():
+        material_type = "Paper"
+    elif "metal" in raw_text.lower():
+        material_type = "Metal"
+    elif "glass" in raw_text.lower():
+        material_type = "Glass"
+    elif "fabric" in raw_text.lower() or "textile" in raw_text.lower():
+        material_type = "Textile"
+    elif "electronic" in raw_text.lower() or "e-waste" in raw_text.lower():
+        material_type = "Electronic"
+    else:
+        material_type = "Mixed materials"
+    
+    # Extract an item description
+    item_description = "Waste item"
+    if "bottle" in raw_text.lower():
+        item_description = "Plastic bottle"
+    elif "container" in raw_text.lower():
+        item_description = "Container"
+    elif "packaging" in raw_text.lower():
+        item_description = "Packaging material"
+    elif "bag" in raw_text.lower():
+        item_description = "Bag"
+    elif "cup" in raw_text.lower():
+        item_description = "Cup"
+    elif "box" in raw_text.lower():
+        item_description = "Box"
+    elif "device" in raw_text.lower() or "electronic" in raw_text.lower():
+        item_description = "Electronic device"
+    
+    # Determine recyclability
+    recyclable = "Not recyclable"
+    if "recyclable: yes" in raw_text.lower() or "is recyclable" in raw_text.lower():
+        recyclable = "Recyclable"
+    
+    # Format the bullet point summary
+    result["summary"] = f"• The image shows a {item_description}.\n• It is primarily made of {material_type}.\n• This item is {recyclable}."
     
     return result

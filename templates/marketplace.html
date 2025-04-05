@@ -1,65 +1,119 @@
 {% extends "base.html" %}
 
-{% block title %}Marketplace | WasteWorks{% endblock %}
-
 {% block content %}
-<div class="container mt-5">
-    <div class="text-center mb-5">
-        <h1 class="display-4">Waste Marketplace</h1>
-        <p class="lead">Find and share recyclable materials</p>
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="display-5">
+            <i class="fas fa-store text-info me-2"></i>
+            Recycling Marketplace
+        </h1>
+        <p class="lead">
+            Browse recyclable items available for pickup or connect with others
+            looking for materials to reuse in creative ways.
+        </p>
     </div>
-    
-    {% if items %}
-    <div class="row row-cols-1 row-cols-md-3 g-4">
-        {% for item in items %}
-        <div class="col">
-            <div class="card h-100 shadow">
-                <img src="/{{ item.image_path }}" class="card-img-top" alt="{{ item.title or 'Recyclable Item' }}" style="height: 200px; object-fit: cover;">
-                <div class="card-body">
-                    <div class="d-flex gap-2 mb-2">
-                        {% if item.is_recyclable %}
-                        <span class="badge bg-success">Recyclable</span>
-                        {% endif %}
-                        
-                        {% if item.is_ewaste %}
-                        <span class="badge bg-warning">E-Waste</span>
-                        {% endif %}
-                        
-                        {% if item.material %}
-                        <span class="badge bg-info">{{ item.material|title }}</span>
-                        {% endif %}
+    <div class="col-md-4 d-flex align-items-center justify-content-end">
+        <a href="{{ url_for('index') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>
+            Add New Item
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body bg-info bg-opacity-10">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-info-circle text-info fs-3 me-3"></i>
+                    <div>
+                        <h5 class="mb-1">How the Marketplace Works</h5>
+                        <p class="mb-0">
+                            List your recyclable items here for others to claim or browse items to find
+                            materials you can reuse. Plastic items are automatically forwarded to the
+                            municipality for raw material processing.
+                        </p>
                     </div>
-                    
-                    <h5 class="card-title">{{ item.title or 'Recyclable ' + item.material|title }}</h5>
-                    
-                    <p class="card-text">
-                        {% if item.description %}
-                            {{ item.description|truncate(100) }}
-                        {% else %}
-                            A recyclable item available for collection or exchange.
-                        {% endif %}
-                    </p>
-                </div>
-                <div class="card-footer">
-                    <div class="d-grid">
-                        <a href="{{ url_for('item_details', item_id=item.id) }}" class="btn btn-primary">View Details</a>
-                    </div>
-                    <small class="text-muted mt-2">Listed on {{ item.created_at.strftime('%Y-%m-%d') }}</small>
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+{% if items %}
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for item in items %}
+            <div class="col">
+                <div class="card h-100 marketplace-item">
+                    {% if item.sent_to_municipality %}
+                        <div class="municipality-badge">
+                            <span class="badge bg-info">
+                                <i class="fas fa-building me-1"></i> Municipality
+                            </span>
+                        </div>
+                    {% endif %}
+                    
+                    <img src="/static/{{ item.image_path }}" class="card-img-top" alt="{{ item.title }}">
+                    
+                    <div class="card-body">
+                        <h5 class="card-title">{{ item.title }}</h5>
+                        
+                        <div class="d-flex mb-3">
+                            <span class="badge bg-secondary me-2">
+                                <i class="material-icon" data-material="{{ item.material }}"></i>
+                                {{ item.material }}
+                            </span>
+                            
+                            {% if item.is_recyclable %}
+                                <span class="badge bg-success me-2">
+                                    <i class="fas fa-recycle me-1"></i> Recyclable
+                                </span>
+                            {% endif %}
+                            
+                            {% if item.is_ewaste %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-laptop me-1"></i> E-Waste
+                                </span>
+                            {% endif %}
+                        </div>
+                        
+                        <p class="card-text">{{ item.description[:100] }}{% if item.description|length > 100 %}...{% endif %}</p>
+                        
+                        <div class="d-flex">
+                            <div class="me-auto">
+                                <small class="text-muted">
+                                    <i class="fas fa-map-marker-alt me-1"></i> {{ item.location }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer bg-transparent border-top-0">
+                        <a href="{{ url_for('item_details', item_id=item.id) }}" class="btn btn-outline-primary d-block">
+                            <i class="fas fa-info-circle me-2"></i>View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
         {% endfor %}
     </div>
-    {% else %}
-    <div class="text-center mt-5">
-        <div class="alert alert-info">
-            <h4>No items listed yet!</h4>
-            <p>Be the first to list a recyclable item on our marketplace.</p>
-            <a href="{{ url_for('index') }}" class="btn btn-outline-primary mt-3">
-                <i class="fas fa-plus-circle me-2"></i>Analyze and List an Item
-            </a>
+{% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-box-open text-muted fs-1 mb-3"></i>
+                    <h3>No items listed yet</h3>
+                    <p class="text-muted">
+                        Be the first to list a recyclable item in the marketplace!
+                    </p>
+                    <a href="{{ url_for('index') }}" class="btn btn-primary mt-3">
+                        <i class="fas fa-plus me-2"></i>
+                        Analyze & List Item
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
-    {% endif %}
-</div>
+{% endif %}
 {% endblock %}

@@ -155,3 +155,8 @@
     margin-bottom: 1.5rem;
     white-space: pre-line;
 }
+
+/* White space for bullet points */
+.white-space-pre-line {
+    white-space: pre-line;
+}

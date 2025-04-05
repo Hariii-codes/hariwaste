@@ -125,8 +125,8 @@
                 </div>
                 {% endif %}
                 
-                <div class="ai-analysis-container p-3 bg-dark bg-opacity-25 rounded mb-4">
-                    {{ item.full_analysis }}
+                <div class="ai-analysis-container p-3 bg-dark bg-opacity-25 rounded mb-4 white-space-pre-line">
+                    {{ item.full_analysis|safe }}
                 </div>
                 
                 {% if item.material_detection %}

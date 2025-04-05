@@ -32,6 +32,40 @@ def clean_text(text):
     
     return clean
 
+def convert_to_bullet_points(text, keep_headings=True):
+    """
+    Convert a paragraph of text into bullet points
+    
+    Args:
+        text: Text string to convert
+        keep_headings: Whether to keep section headings
+        
+    Returns:
+        Text formatted as bullet points
+    """
+    if not text:
+        return ""
+    
+    # Split the text into sentences
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    
+    # Filter out empty sentences and very short ones
+    sentences = [s.strip() for s in sentences if len(s.strip()) > 5]
+    
+    # Extract heading if present (assume it's the first line if it ends with a colon)
+    heading = ""
+    if keep_headings and sentences and ':' in sentences[0]:
+        heading_parts = sentences[0].split(':', 1)
+        if len(heading_parts) == 2:
+            heading = heading_parts[0] + ":\n"
+            sentences[0] = heading_parts[1].strip()
+    
+    # Convert each sentence to a bullet point
+    bullet_points = [f"• {s}" for s in sentences]
+    
+    # Join with newlines
+    return heading + "\n".join(bullet_points)
+
 def format_gemini_response(response_dict):
     """
     Format the response from Gemini AI to clean up sections
@@ -48,27 +82,28 @@ def format_gemini_response(response_dict):
     # Copy original fields
     formatted.update(response_dict)
     
-    # Clean specific text fields
+    # Clean specific text fields and convert to bullet points
     if 'full_analysis' in response_dict:
-        formatted['full_analysis'] = clean_text(response_dict['full_analysis'])
+        clean_analysis = clean_text(response_dict['full_analysis'])
+        formatted['full_analysis'] = convert_to_bullet_points(clean_analysis, keep_headings=True)
     
     if 'recycling_instructions' in response_dict:
         # Remove headings like "How to recycle:" 
         text = clean_text(response_dict['recycling_instructions'])
         text = re.sub(r'^(How to recycle:|Recycling Instructions:)\s*', '', text, flags=re.IGNORECASE)
-        formatted['recycling_instructions'] = text
+        formatted['recycling_instructions'] = "Recycling preparation instructions:\n" + convert_to_bullet_points(text, keep_headings=False)
     
     if 'environmental_impact' in response_dict:
         # Remove headings like "Environmental Impact:"
         text = clean_text(response_dict['environmental_impact'])
         text = re.sub(r'^(Environmental Impact:|Impact:)\s*', '', text, flags=re.IGNORECASE)
-        formatted['environmental_impact'] = text
+        formatted['environmental_impact'] = "Environmental impact:\n" + convert_to_bullet_points(text, keep_headings=False)
     
     if 'disposal_recommendations' in response_dict:
         # Remove headings and numbering
         text = clean_text(response_dict['disposal_recommendations'])
         text = re.sub(r'^(Disposal Recommendations:|Best Disposal Method:)\s*', '', text, flags=re.IGNORECASE)
-        formatted['disposal_recommendations'] = text
+        formatted['disposal_recommendations'] = "Disposal recommendations:\n" + convert_to_bullet_points(text, keep_headings=False)
     
     # Generate summary based on available information if not already there
     if not response_dict.get('summary') and response_dict.get('full_analysis'):
@@ -136,7 +171,8 @@ def extract_sections_from_raw_text(raw_text):
         re.IGNORECASE | re.DOTALL
     )
     if recycling_match:
-        result["recycling_instructions"] = recycling_match.group(1).strip()
+        text = recycling_match.group(1).strip()
+        result["recycling_instructions"] = "Recycling preparation instructions:\n" + convert_to_bullet_points(text, keep_headings=False)
     
     # Extract environmental impact
     impact_match = re.search(
@@ -145,7 +181,8 @@ def extract_sections_from_raw_text(raw_text):
         re.IGNORECASE | re.DOTALL
     )
     if impact_match:
-        result["environmental_impact"] = impact_match.group(1).strip()
+        text = impact_match.group(1).strip()
+        result["environmental_impact"] = "Environmental impact:\n" + convert_to_bullet_points(text, keep_headings=False)
     
     # Extract disposal recommendations
     disposal_match = re.search(
@@ -154,7 +191,8 @@ def extract_sections_from_raw_text(raw_text):
         re.IGNORECASE | re.DOTALL
     )
     if disposal_match:
-        result["disposal_recommendations"] = disposal_match.group(1).strip()
+        text = disposal_match.group(1).strip()
+        result["disposal_recommendations"] = "Disposal recommendations:\n" + convert_to_bullet_points(text, keep_headings=False)
     
     # Create a concise summary in bullet points
     material_type = ""

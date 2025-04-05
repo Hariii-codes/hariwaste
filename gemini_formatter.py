@@ -5,7 +5,7 @@ makes the AI output less readable in the UI.
 """
 
 import re
-from bs4 import BeautifulSoup
+import logging
 
 def clean_text(text):
     """
@@ -17,18 +17,14 @@ def clean_text(text):
     Returns:
         Clean text without HTML tags
     """
-    if not text:
-        return ""
-        
-    # Use BeautifulSoup to remove HTML
-    soup = BeautifulSoup(text, 'html.parser')
-    clean = soup.get_text()
-    
-    # Remove numbered list patterns (1., 2., etc.)
-    clean = re.sub(r'^\s*\d+\.\s*', '', clean, flags=re.MULTILINE)
+    # Remove HTML tags
+    clean = re.sub(r'<[^>]*>', '', text)
     
     # Remove extra whitespace
     clean = re.sub(r'\s+', ' ', clean).strip()
+    
+    # Convert Markdown-style headers to plain headers
+    clean = re.sub(r'#{1,6}\s+([^\n]+)', r'\1:', clean)
     
     return clean
 
@@ -43,34 +39,21 @@ def format_gemini_response(response_dict):
     Returns:
         Updated dictionary with cleaned and formatted text
     """
-    formatted = {}
+    try:
+        # Clean up the full analysis text
+        if "full_analysis" in response_dict:
+            response_dict["full_analysis"] = clean_text(response_dict["full_analysis"])
+        
+        # Clean up other text fields
+        for field in ["recycling_instructions", "environmental_impact", "disposal_recommendations"]:
+            if field in response_dict:
+                response_dict[field] = clean_text(response_dict[field])
+        
+        return response_dict
     
-    # Copy original fields
-    formatted.update(response_dict)
-    
-    # Clean specific text fields
-    if 'full_analysis' in response_dict:
-        formatted['full_analysis'] = clean_text(response_dict['full_analysis'])
-    
-    if 'recycling_instructions' in response_dict:
-        # Remove headings like "How to recycle:" 
-        text = clean_text(response_dict['recycling_instructions'])
-        text = re.sub(r'^(How to recycle:|Recycling Instructions:)\s*', '', text, flags=re.IGNORECASE)
-        formatted['recycling_instructions'] = text
-    
-    if 'environmental_impact' in response_dict:
-        # Remove headings like "Environmental Impact:"
-        text = clean_text(response_dict['environmental_impact'])
-        text = re.sub(r'^(Environmental Impact:|Impact:)\s*', '', text, flags=re.IGNORECASE)
-        formatted['environmental_impact'] = text
-    
-    if 'disposal_recommendations' in response_dict:
-        # Remove headings and numbering
-        text = clean_text(response_dict['disposal_recommendations'])
-        text = re.sub(r'^(Disposal Recommendations:|Best Disposal Method:)\s*', '', text, flags=re.IGNORECASE)
-        formatted['disposal_recommendations'] = text
-    
-    return formatted
+    except Exception as e:
+        logging.error(f"Error formatting Gemini response: {str(e)}")
+        return response_dict  # Return original if formatting fails
 
 def extract_sections_from_raw_text(raw_text):
     """
@@ -84,38 +67,41 @@ def extract_sections_from_raw_text(raw_text):
     Returns:
         Dictionary with extracted sections
     """
-    result = {
-        "full_analysis": raw_text,
-        "recycling_instructions": "",
-        "environmental_impact": "",
-        "disposal_recommendations": ""
-    }
+    sections = {}
     
-    # Extract recycling instructions
-    recycling_match = re.search(
-        r'(?:recycling instructions:|how to recycle:)(.*?)(?=environmental impact:|$)', 
-        raw_text, 
-        re.IGNORECASE | re.DOTALL
-    )
+    # Extract recyclability information (Point 1)
+    recyclable_match = re.search(r'(?:1\.?|Is this item recyclable\??)[^\n]*?(Yes|No)', raw_text, re.IGNORECASE)
+    if recyclable_match:
+        sections["recyclable"] = recyclable_match.group(1)
+    
+    # Extract material information (Point 2)
+    material_match = re.search(r'(?:2\.?|What material is it made of\??)[^\n]*?(Plastic|Metal|Paper|Glass|Wood|Fabric|Textile|Rubber|Ceramic|Mixed|Unknown|Composite)', raw_text, re.IGNORECASE)
+    if material_match:
+        sections["material"] = material_match.group(1)
+    else:
+        # Try a more general pattern if specific materials aren't found
+        material_match = re.search(r'(?:2\.?|What material is it made of\??)[^\n]*?:?\s*([^\.,:;\n]+)', raw_text, re.IGNORECASE)
+        if material_match:
+            sections["material"] = material_match.group(1).strip()
+    
+    # Extract e-waste information (Point 3)
+    ewaste_match = re.search(r'(?:3\.?|Is it e-waste\??)[^\n]*?(Yes|No)', raw_text, re.IGNORECASE)
+    if ewaste_match:
+        sections["ewaste"] = ewaste_match.group(1)
+    
+    # Extract recycling instructions (Point 4)
+    recycling_match = re.search(r'(?:4\.?|Recycling Instructions:?|Provide detailed recycling instructions)[^\n]*?\n(.*?)(?:\n\s*[5-6]\.|\n\s*Environmental Impact|\n\s*Recommendations|\Z)', raw_text, re.DOTALL | re.IGNORECASE)
     if recycling_match:
-        result["recycling_instructions"] = recycling_match.group(1).strip()
+        sections["recycling_instructions"] = recycling_match.group(1).strip()
     
-    # Extract environmental impact
-    impact_match = re.search(
-        r'(?:environmental impact:|impact:)(.*?)(?=disposal|best disposal method|$)', 
-        raw_text, 
-        re.IGNORECASE | re.DOTALL
-    )
+    # Extract environmental impact (Point 5)
+    impact_match = re.search(r'(?:5\.?|Environmental Impact:?|Explain the environmental impact)[^\n]*?\n(.*?)(?:\n\s*6\.|\n\s*Recommendations|\Z)', raw_text, re.DOTALL | re.IGNORECASE)
     if impact_match:
-        result["environmental_impact"] = impact_match.group(1).strip()
+        sections["environmental_impact"] = impact_match.group(1).strip()
     
-    # Extract disposal recommendations
-    disposal_match = re.search(
-        r'(?:disposal recommendations:|best disposal method:)(.*?)(?=\Z)', 
-        raw_text, 
-        re.IGNORECASE | re.DOTALL
-    )
-    if disposal_match:
-        result["disposal_recommendations"] = disposal_match.group(1).strip()
+    # Extract disposal recommendations (Point 6)
+    recommendations_match = re.search(r'(?:6\.?|Recommendations:?|Give practical recommendations)[^\n]*?\n(.*?)(?:\Z)', raw_text, re.DOTALL | re.IGNORECASE)
+    if recommendations_match:
+        sections["disposal_recommendations"] = recommendations_match.group(1).strip()
     
-    return result
+    return sections

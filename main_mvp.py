@@ -1,7 +1,7 @@
 import os
 from app import app
+from routes_mvp import register_routes
 from auth import auth_bp
-from routes import register_routes
 
 # Configure the upload folder
 UPLOAD_FOLDER = 'static/uploads'

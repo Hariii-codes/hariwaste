@@ -1,6 +1,8 @@
 from datetime import datetime
 import json
-from app import db, bcrypt
+from app import db
+from flask_bcrypt import Bcrypt
+bcrypt = Bcrypt()
 from flask_login import UserMixin
 
 class User(UserMixin, db.Model):
@@ -53,19 +55,6 @@ class WasteItem(db.Model):
     contact_email = db.Column(db.String(120))
     contact_phone = db.Column(db.String(20))
     location = db.Column(db.String(200))
-    
-    # Municipality tracking
-    sent_to_municipality = db.Column(db.Boolean, default=False)
-    municipality_status = db.Column(db.String(50), default='Not Sent')
-    
-    # Drop-off tracking
-    is_dropped_off = db.Column(db.Boolean, default=False)
-    drop_location_id = db.Column(db.Integer, db.ForeignKey('drop_location.id'), nullable=True)
-    drop_date = db.Column(db.DateTime, nullable=True)
-    
-    # Recycling tracking
-    recycling_completed = db.Column(db.Boolean, default=False)
-    recycling_completion_date = db.Column(db.DateTime, nullable=True)
     
     @property
     def material_detection(self):

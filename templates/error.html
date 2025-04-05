@@ -1,22 +1,22 @@
 {% extends "base.html" %}
 
+{% block title %}Error | WasteWorks{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8 text-center">
-        <div class="card">
-            <div class="card-body py-5">
-                <i class="fas fa-exclamation-triangle text-warning display-1 mb-4"></i>
-                
-                <h1 class="display-4 mb-4">Oops!</h1>
-                
-                <p class="lead mb-4">
-                    {{ error }}
-                </p>
-                
-                <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">
-                    <i class="fas fa-home me-2"></i>
-                    Return to Home
-                </a>
+<div class="container mt-5 text-center">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <i class="fas fa-exclamation-triangle fa-5x text-warning mb-4"></i>
+                    <h1 class="display-6">Oops!</h1>
+                    <p class="lead">{{ error }}</p>
+                    <div class="mt-4">
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">
+                            <i class="fas fa-home me-2"></i>Return to Home
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

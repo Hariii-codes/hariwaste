@@ -29,8 +29,13 @@ db.init_app(app)
 bcrypt.init_app(app)
 login_manager.init_app(app)
 
+# Import models for database creation
+with app.app_context():
+    from models_mvp import User, WasteItem, DropLocation
+    db.create_all()
+
 # User loader for Flask-Login
 @login_manager.user_loader
 def load_user(user_id):
-    from models import User
+    from models_mvp import User
     return User.query.get(int(user_id))

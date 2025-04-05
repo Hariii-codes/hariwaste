@@ -1,10 +1,10 @@
-from flask import Blueprint, render_template, url_for, flash, redirect, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
 from flask_login import login_user, current_user, logout_user, login_required
 from app import db
-from models import User
+from models_mvp import User
 
 auth_bp = Blueprint('auth', __name__)
 

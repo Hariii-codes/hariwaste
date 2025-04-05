@@ -2,7 +2,7 @@ services:
   - type: web
     name: wasteworks
     env: python
-    buildCommand: pip install -r dependencies.txt
+    buildCommand: pip install -r requirements-render.txt
     startCommand: gunicorn --bind 0.0.0.0:$PORT main:app
     envVars:
       - key: SESSION_SECRET

@@ -58,6 +58,43 @@ The application uses several related models:
 - WasteJourneyBlock (blockchain-like tracking)
 - InfrastructureReport (citizen reports of damaged infrastructure)
 
+## Deployment
+
+### Deploy to Render.com
+
+This application is configured for easy deployment on Render.com:
+
+1. Fork or clone this repository to your GitHub account
+2. Sign up for Render.com and connect your GitHub account
+3. Create a new Web Service and select your repository
+4. Use the following settings:
+   - Environment: Python
+   - Build Command: `pip install -r requirements-render.txt`
+   - Start Command: `gunicorn --bind 0.0.0.0:$PORT --workers=2 main:app`
+
+5. Add the following environment variables:
+   - `SESSION_SECRET`: (generate a random value)
+   - `FLASK_ENV`: production
+   - `PYTHON_VERSION`: 3.11.8
+
+6. Create a PostgreSQL database in Render:
+   - Go to Dashboard -> New -> PostgreSQL
+   - Link it to your web service
+
+7. The application will automatically set up the database schema during first deployment.
+
+### Database Migrations
+
+If you need to update the database schema after deployment:
+
+```bash
+# For adding new columns to existing tables:
+python update_db.py
+
+# For completely resetting the database (warning: all data will be lost):
+python recreate_db.py
+```
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

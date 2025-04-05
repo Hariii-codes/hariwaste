@@ -22,12 +22,23 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key")
 
 # Configure the database
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///waste_management.db")
+# Fix for Render PostgreSQL URLs which may start with postgres:// instead of postgresql://
+database_url = os.environ.get("DATABASE_URL", "sqlite:///waste_management.db")
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+    
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
+    "connect_args": {
+        "connect_timeout": 10,  # Longer timeout for initial connections
+    }
 }
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Add additional logging for database connections
+logging.info(f"Connecting to database at: {database_url.split('@')[0].split('://')[0]}://*****@*****")
 
 # Configure upload folder
 UPLOAD_FOLDER = "static/uploads"

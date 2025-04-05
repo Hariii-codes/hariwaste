@@ -1,9 +1,19 @@
+databases:
+  - name: wasteworks-db
+    plan: free
+    databaseName: wasteworks
+    user: wasteworks_user
+    ipAllowList: [] # Allow connections from anywhere
+
 services:
   - type: web
     name: wasteworks
     env: python
+    plan: free
     buildCommand: pip install -r requirements-render.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT main:app
+    preDeployCommand: "python update_db.py"
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers=2 main:app
+    runtime: python3.11
     envVars:
       - key: SESSION_SECRET
         generateValue: true
@@ -11,8 +21,10 @@ services:
         fromDatabase:
           name: wasteworks-db
           property: connectionString
-
-databases:
-  - name: wasteworks-db
-    databaseName: wasteworks
-    user: wasteworks_user
+      - key: PYTHON_VERSION
+        value: 3.11.8
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHONUNBUFFERED
+        value: "true"
+    autoDeploy: true

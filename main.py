@@ -17,4 +17,13 @@ app.register_blueprint(auth_bp)
 register_routes(app)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Determine if we're running in production or development
+    is_prod = os.environ.get('FLASK_ENV') == 'production'
+    port = int(os.environ.get('PORT', 5000))
+    
+    # Run the app with appropriate settings
+    app.run(
+        host="0.0.0.0", 
+        port=port, 
+        debug=not is_prod
+    )

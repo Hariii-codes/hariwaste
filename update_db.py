@@ -23,7 +23,7 @@ def update_waste_item_table():
             # Add summary column if it doesn't exist
             conn.execute(text('ALTER TABLE waste_item ADD COLUMN IF NOT EXISTS summary TEXT;'))
             
-            conn.commit()
+            # The commit is handled automatically by the context manager in SQLAlchemy 2.0+
         print("Table schema updated successfully.")
 
 if __name__ == '__main__':

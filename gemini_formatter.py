@@ -60,11 +60,11 @@ def convert_to_bullet_points(text, keep_headings=True):
             heading = heading_parts[0] + ":\n"
             sentences[0] = heading_parts[1].strip()
     
-    # Convert each sentence to a bullet point
-    bullet_points = [f"• {s}" for s in sentences]
+    # Convert each sentence to a bullet point with HTML formatting
+    bullet_points = [f'<div class="bullet-point">{s}</div>' for s in sentences]
     
-    # Join with newlines
-    return heading + "\n".join(bullet_points)
+    # Join with no extra newlines (the CSS will handle spacing)
+    return heading + "".join(bullet_points)
 
 def format_gemini_response(response_dict):
     """
@@ -137,8 +137,8 @@ def format_gemini_response(response_dict):
         if response_dict.get('is_recyclable'):
             recyclable = "Recyclable"
             
-        # Create bullet point summary
-        formatted['summary'] = f"• The image shows a {item_description}.\n• It is primarily made of {material_type}.\n• This item is {recyclable}."
+        # Create bullet point summary with HTML formatting
+        formatted['summary'] = f'<div class="bullet-point">The image shows a {item_description}.</div><div class="bullet-point">It is primarily made of {material_type}.</div><div class="bullet-point">This item is {recyclable}.</div>'
     elif 'summary' in response_dict:
         formatted['summary'] = response_dict['summary']
     
@@ -233,7 +233,7 @@ def extract_sections_from_raw_text(raw_text):
     if "recyclable: yes" in raw_text.lower() or "is recyclable" in raw_text.lower():
         recyclable = "Recyclable"
     
-    # Format the bullet point summary
-    result["summary"] = f"• The image shows a {item_description}.\n• It is primarily made of {material_type}.\n• This item is {recyclable}."
+    # Format the bullet point summary with HTML formatting
+    result["summary"] = f'<div class="bullet-point">The image shows a {item_description}.</div><div class="bullet-point">It is primarily made of {material_type}.</div><div class="bullet-point">This item is {recyclable}.</div>'
     
     return result

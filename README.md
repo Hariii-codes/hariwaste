@@ -2,8 +2,6 @@
 
 A cutting-edge waste management platform that transforms recycling into an engaging, rewarding experience through advanced technologies and user-centric design.
 
-![WasteWorks](static/img/logo.png)
-
 ## 🌟 Key Features
 
 - **AI-powered Material Identification**: Upload images of waste items to receive detailed analysis on recyclability, material composition, and proper disposal methods

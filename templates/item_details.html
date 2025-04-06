@@ -255,6 +255,15 @@
                     </a>
                     {% endif %}
                     
+                    {% if item.is_recyclable and not item.sent_to_municipality and not item.is_dropped_off %}
+                    <form method="POST" action="{{ url_for('send_to_municipality', item_id=item.id) }}">
+                        <button type="submit" class="btn btn-outline-success d-block w-100">
+                            <i class="fas fa-recycle me-2"></i>
+                            Inform Municipality for Collection & Earn Rewards
+                        </button>
+                    </form>
+                    {% endif %}
+                    
                     <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
                         <i class="fas fa-camera me-2"></i>
                         Analyze Another Item

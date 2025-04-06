@@ -56,6 +56,7 @@ def analyze_waste(image_path):
             primary_material = material_detection_result.get('primary_material', 'unknown')
             recyclability = material_detection_result.get('recyclability_score', 0)
             is_recyclable = recyclability > 50
+            is_ewaste = material_detection_result.get('is_ewaste', False)
             
             # Format material composition information
             composition_info = ""
@@ -74,6 +75,7 @@ def analyze_waste(image_path):
             - Primary material: {primary_material.capitalize()}
             - Material composition:\n{composition_info}
             - Is recyclable: {'Likely' if is_recyclable else 'Unlikely'} (score: {recyclability}%)
+            - Is electronic waste: {'Yes' if is_ewaste else 'No'}
             - Dominant colors:\n{color_info}
             - Analysis method: {material_detection_result.get('analysis_method', 'unknown')}
             

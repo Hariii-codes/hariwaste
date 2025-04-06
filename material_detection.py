@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import logging
 from PIL import Image
+from sklearn.cluster import KMeans
 
 # Define material color profiles based on dominant color ranges
 MATERIAL_COLOR_PROFILES = {
@@ -103,6 +104,9 @@ def detect_material(image_path):
         brightness = np.mean(resized)
         color_variance = np.std(resized)
         
+        # Get dominant colors using K-means
+        dominant_colors = extract_dominant_colors(image_path, num_colors=5)
+        
         # Get color distribution
         material_scores = {}
         
@@ -131,6 +135,24 @@ def detect_material(image_path):
                 
                 score += match_percentage * weight * 5.0
             
+            # Additional rules for better material detection
+            if material == "plastic":
+                # Check if image has plastic characteristics (smooth textures, bright colors)
+                plastic_score = detect_plastic_characteristics(resized, dominant_colors)
+                score += plastic_score * 0.3
+            
+            elif material == "paper":
+                # Check if image has paper characteristics (texture, matte appearance)
+                paper_score = detect_paper_characteristics(resized)
+                score += paper_score * 0.3
+                
+            # Adjust e-waste detection to be more accurate
+            elif material == "electronic":
+                # E-waste needs very specific visual cues (circuit boards, wires, etc.)
+                # By default, set a very low score unless we see clear evidence
+                if detect_electronic_components(resized) < 0.3:
+                    score = min(score, 0.1)  # Cap at very low confidence
+            
             material_scores[material] = min(score, 1.0)  # Cap at 1.0
         
         # Sort materials by score
@@ -140,17 +162,20 @@ def detect_material(image_path):
             reverse=True
         )
         
-        # Calculate percentage composition for top 3 materials
-        total_score = sum(score for _, score in sorted_materials[:3]) or 1
+        # Only include materials with reasonable confidence
+        significant_materials = [(m, s) for m, s in sorted_materials if s > 0.15]
+        
+        # Calculate percentage composition for significant materials
+        total_score = sum(score for _, score in significant_materials) or 1
         material_composition = {
             material: {
                 "confidence": score,
                 "percentage": round((score / total_score) * 100)
             }
-            for material, score in sorted_materials[:3] if score > 0.1
+            for material, score in significant_materials
         }
         
-        primary_material = sorted_materials[0][0] if sorted_materials else "unknown"
+        primary_material = significant_materials[0][0] if significant_materials else "unknown"
         
         # Calculate recyclability based on material composition
         recyclable_materials = ["paper", "plastic", "glass", "metal"]
@@ -159,11 +184,33 @@ def detect_material(image_path):
             for m in material_composition if m in recyclable_materials
         )
         
+        # For images with mixed materials, enforce a dominant material
+        # if top confidence is close to others
+        if len(significant_materials) > 1:
+            top_confidence = significant_materials[0][1]
+            runner_up_confidence = significant_materials[1][1]
+            
+            # If the confidence difference is small, use visual cues to decide
+            if (top_confidence - runner_up_confidence) < 0.15:
+                # Look for specific visual cues in the image that might indicate material type
+                # For example, plastic shapes vs paper texture
+                if "plastic" in material_composition and "paper" in material_composition:
+                    # If image has more plastic-like qualities (smooth, reflective surfaces)
+                    if detect_plastic_characteristics(resized, dominant_colors) > 0.5:
+                        primary_material = "plastic"
+                    # If image has more paper-like qualities (texture, matte)
+                    elif detect_paper_characteristics(resized) > 0.5:
+                        primary_material = "paper"
+        
+        # Determine if it's likely e-waste - requiring clear electronic components
+        is_ewaste = material_scores.get("electronic", 0) > 0.5
+        
         return {
             "primary_material": primary_material,
             "composition": material_composition,
             "recyclability_score": round(recyclability_score * 100),
-            "analysis_method": "color_distribution",
+            "analysis_method": "enhanced_color_distribution",
+            "is_ewaste": is_ewaste
         }
         
     except Exception as e:
@@ -175,6 +222,152 @@ def detect_material(image_path):
             "recyclability_score": 0,
             "analysis_method": "failed"
         }
+
+
+def detect_plastic_characteristics(img, dominant_colors):
+    """
+    Detect whether an image has characteristics typical of plastic materials.
+    
+    Args:
+        img: Resized image array
+        dominant_colors: List of dominant RGB colors
+        
+    Returns:
+        Score indicating likelihood of plastic (0-1)
+    """
+    try:
+        plastic_score = 0.0
+        
+        # Check for glossy/smooth appearance - less texture variation in local areas
+        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        local_std = cv2.boxFilter(np.float32(gray), -1, (5, 5), normalize=True, borderType=cv2.BORDER_DEFAULT)
+        local_std = np.std(local_std)
+        
+        # Lower standard deviation means smoother texture (like plastic)
+        if local_std < 15:
+            plastic_score += 0.3
+        
+        # Check for common plastic colors
+        plastic_color_matches = 0
+        for color in dominant_colors[:3]:  # Check top 3 colors
+            r, g, b = color
+            # Common plastic colors (bright, saturated colors or white/clear)
+            if (r > 200 and g > 200 and b > 200) or \
+               (max(r, g, b) - min(r, g, b) > 100):  # High saturation
+                plastic_color_matches += 1
+        
+        plastic_score += (plastic_color_matches / 3) * 0.3
+        
+        # Check for reflective highlights - plastic often has bright spots
+        hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        _, _, v = cv2.split(hsv)
+        highlight_pixels = np.sum(v > 220) / v.size
+        
+        if highlight_pixels > 0.05:  # If more than 5% of image has highlights
+            plastic_score += 0.2
+        
+        return min(plastic_score, 1.0)
+    
+    except Exception as e:
+        logging.error(f"Error in plastic detection: {str(e)}")
+        return 0.2  # Default modest value
+
+
+def detect_paper_characteristics(img):
+    """
+    Detect whether an image has characteristics typical of paper materials.
+    
+    Args:
+        img: Resized image array
+        
+    Returns:
+        Score indicating likelihood of paper (0-1)
+    """
+    try:
+        paper_score = 0.0
+        
+        # Convert to grayscale for texture analysis
+        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        
+        # Check for matte appearance (more texture, less glossy highlights)
+        local_std = cv2.boxFilter(np.float32(gray), -1, (5, 5), normalize=True, borderType=cv2.BORDER_DEFAULT)
+        local_std = np.std(local_std)
+        
+        # Higher standard deviation means more texture (like paper)
+        if local_std > 15:
+            paper_score += 0.3
+        
+        # Check for typical paper colors (warm white, beige, brownish, grayish)
+        hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        h, s, v = cv2.split(hsv)
+        
+        # Paper typically has low saturation
+        low_saturation_pixels = np.sum(s < 50) / s.size
+        if low_saturation_pixels > 0.6:  # If more than 60% has low saturation
+            paper_score += 0.3
+        
+        # Paper often has medium brightness
+        mid_brightness_pixels = np.sum((v > 100) & (v < 200)) / v.size
+        if mid_brightness_pixels > 0.5:  # If more than 50% has medium brightness
+            paper_score += 0.2
+        
+        return min(paper_score, 1.0)
+    
+    except Exception as e:
+        logging.error(f"Error in paper detection: {str(e)}")
+        return 0.2  # Default modest value
+
+
+def detect_electronic_components(img):
+    """
+    Detect whether an image contains electronic components.
+    
+    Args:
+        img: Resized image array
+        
+    Returns:
+        Score indicating likelihood of electronic components (0-1)
+    """
+    try:
+        electronics_score = 0.0
+        
+        # Look for circuit-like patterns and components
+        # Convert to grayscale
+        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        
+        # Check for edges (circuits and electronic components have many edges)
+        edges = cv2.Canny(gray, 100, 200)
+        edge_density = np.sum(edges > 0) / edges.size
+        
+        if edge_density > 0.1:  # If more than 10% of image has edges
+            electronics_score += 0.3
+        
+        # Check for regular patterns/lines (common in circuit boards)
+        # Use Hough line transform
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=30, 
+                                minLineLength=30, maxLineGap=10)
+        
+        # If we have detected lines and there are several of them
+        if lines is not None and len(lines) > 5:
+            electronics_score += 0.3
+        
+        # Check for typical electronic colors (like green PCB, metallic components)
+        hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        h, s, v = cv2.split(hsv)
+        
+        # PCB green color range
+        pcb_green_pixels = np.sum((h > 40) & (h < 80) & (s > 40)) / h.size
+        # Metallic colors (low saturation, high brightness)
+        metallic_pixels = np.sum((s < 50) & (v > 150)) / s.size
+        
+        if pcb_green_pixels > 0.2 or metallic_pixels > 0.3:
+            electronics_score += 0.3
+        
+        return min(electronics_score, 1.0)
+    
+    except Exception as e:
+        logging.error(f"Error in electronics detection: {str(e)}")
+        return 0.0  # Default to no electronics
 
 
 def extract_dominant_colors(image_path, num_colors=5):

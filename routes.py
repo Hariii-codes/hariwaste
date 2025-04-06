@@ -160,12 +160,62 @@ def register_routes(app):
     
     @app.route("/send-to-municipality/<int:item_id>", methods=["POST"])
     def send_to_municipality(item_id):
-        """Route an item to municipality"""
+        """Route an item to municipality and award rewards for contributing to recycling"""
         item = WasteItem.query.get_or_404(item_id)
         item.sent_to_municipality = True
         item.municipality_status = "Pending"
         db.session.commit()
-        flash("Item sent to municipality successfully", "success")
+        
+        # Award points to the logged-in user if authenticated
+        if current_user.is_authenticated:
+            try:
+                # Give rewards based on material type
+                points = 0
+                reward_desc = ""
+                
+                if item.material.lower() == 'plastic':
+                    points = 100
+                    reward_desc = "Sending plastic waste for municipal recycling"
+                elif item.material.lower() == 'paper':
+                    points = 75
+                    reward_desc = "Sending paper waste for municipal recycling"
+                elif item.material.lower() == 'glass':
+                    points = 90
+                    reward_desc = "Sending glass waste for municipal recycling"
+                elif item.material.lower() == 'metal':
+                    points = 120
+                    reward_desc = "Sending metal waste for municipal recycling"
+                elif item.material.lower() == 'electronic':
+                    points = 150
+                    reward_desc = "Properly disposing of electronic waste"
+                else:
+                    points = 50
+                    reward_desc = "Sending waste for municipal recycling"
+                
+                # Create a reward record
+                from models import Reward
+                reward = Reward(
+                    user_id=current_user.id,
+                    points=points,
+                    description=reward_desc,
+                    reward_type="municipality"
+                )
+                db.session.add(reward)
+                
+                # Update user's eco points
+                current_user.eco_points += points
+                db.session.commit()
+                
+                # Check if the user has earned any achievements
+                check_achievements(current_user.id)
+                
+                flash(f"Item sent to municipality successfully! You earned {points} eco-points.", "success")
+            except Exception as e:
+                logging.error(f"Error awarding points: {e}")
+                flash("Item sent to municipality successfully, but there was an error awarding points.", "warning")
+        else:
+            flash("Item sent to municipality successfully. Log in to earn eco-points for your contributions!", "info")
+            
         return redirect(url_for("item_details", item_id=item_id))
     
     @app.route("/update-municipality-status/<int:item_id>", methods=["POST"])

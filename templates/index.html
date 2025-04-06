@@ -230,11 +230,13 @@
                                     <i class="fas fa-store me-2"></i>List in Marketplace
                                 </a>
                                 
-                                {% if waste_item and result.material|lower == 'plastic' %}
-                                    <div class="alert alert-info mt-2 mb-0">
-                                        <i class="fas fa-info-circle me-2"></i>
-                                        Plastic items will be automatically routed to the municipality for raw material processing.
-                                    </div>
+                                {% if waste_item %}
+                                <form method="POST" action="{{ url_for('send_to_municipality', item_id=waste_item.id) }}">
+                                    <button type="submit" class="btn btn-outline-success d-block w-100 mt-2">
+                                        <i class="fas fa-recycle me-2"></i>
+                                        Inform Municipality for Collection & Earn Rewards
+                                    </button>
+                                </form>
                                 {% endif %}
                             </div>
                         </div>
@@ -276,44 +278,255 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header bg-success bg-opacity-25">
-                <h5 class="mb-0">
-                    <i class="fas fa-info-circle me-2"></i>
-                    How It Works
-                </h5>
+                <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Find Waste Drop Points</h5>
             </div>
             <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-md-3">
-                        <div class="p-3">
-                            <i class="fas fa-camera-retro fs-1 text-primary mb-3"></i>
-                            <h5>1. Upload Image</h5>
-                            <p>Take a photo of your waste item and upload it to our system.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="p-3">
-                            <i class="fas fa-brain fs-1 text-primary mb-3"></i>
-                            <h5>2. Advanced AI Analysis</h5>
-                            <p>Our AI analyzes the image to determine material, recyclability, environmental impact, and disposal instructions.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="p-3">
-                            <i class="fas fa-recycle fs-1 text-primary mb-3"></i>
-                            <h5>3. Get Recommendations</h5>
-                            <p>Receive detailed recommendations on how to handle your waste.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="p-3">
-                            <i class="fas fa-handshake fs-1 text-primary mb-3"></i>
-                            <h5>4. Connect with Recyclers</h5>
-                            <p>List recyclable items or send them to municipal programs.</p>
-                        </div>
-                    </div>
-                </div>
+                <p class="card-text">
+                    We have several waste collection and recycling drop points around the city. 
+                    Visit them to properly dispose of your recyclable waste.
+                </p>
+                <a href="{{ url_for('drop_points') }}" class="btn btn-outline-success">
+                    <i class="fas fa-map me-2"></i>View Drop Points Map
+                </a>
             </div>
         </div>
     </div>
 </div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info bg-opacity-25">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Track Your Waste</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Follow the journey of your waste from collection to recycling facility 
+                    using our blockchain-based tracking system.
+                </p>
+                <a href="#" class="btn btn-outline-info">
+                    <i class="fas fa-search me-2"></i>Track Your Contributions
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-warning bg-opacity-25">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Report Infrastructure Issues</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Notice damaged recycling bins, overflowing collection points, or other 
+                    waste management infrastructure issues? Report them here.
+                </p>
+                <a href="{{ url_for('report_infrastructure') }}" class="btn btn-outline-warning">
+                    <i class="fas fa-camera me-2"></i>Submit Infrastructure Report
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal For Login Prompt -->
+<div class="modal fade" id="loginPromptModal" tabindex="-1" aria-labelledby="loginPromptModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="loginPromptModalLabel">Login Required</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>You need to be logged in to use this feature. Would you like to log in now?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Log In</a>
+                <a href="{{ url_for('auth.register') }}" class="btn btn-success">Sign Up</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const uploadForm = document.getElementById('upload-form');
+    const fileInput = document.getElementById('waste-image');
+    const uploadContainer = document.getElementById('upload-container');
+    const webcamOptionContainer = document.getElementById('webcam-option-container');
+    const webcamContainer = document.getElementById('webcam-container');
+    const startWebcamButton = document.getElementById('start-webcam');
+    const closeWebcamButton = document.getElementById('close-webcam');
+    const captureImageButton = document.getElementById('capture-image');
+    const webcamVideo = document.getElementById('webcam-video');
+    const webcamCanvas = document.getElementById('webcam-canvas');
+    const webcamImageData = document.getElementById('webcam-image-data');
+    const uploadBtn = document.getElementById('upload-btn');
+    const uploadSpinner = document.getElementById('upload-spinner');
+    const optionUpload = document.getElementById('option-upload');
+    const optionWebcam = document.getElementById('option-webcam');
+    const previewContainer = document.getElementById('image-preview-container');
+    const previewImage = document.getElementById('preview-image');
+    const webcamAlerts = document.getElementById('webcam-alerts');
+    
+    let stream = null;
+    
+    // Handle capture option change
+    optionUpload.addEventListener('change', function() {
+        if (this.checked) {
+            uploadContainer.classList.remove('d-none');
+            webcamOptionContainer.classList.add('d-none');
+            stopWebcam();
+        }
+    });
+    
+    optionWebcam.addEventListener('change', function() {
+        if (this.checked) {
+            uploadContainer.classList.add('d-none');
+            webcamOptionContainer.classList.remove('d-none');
+        }
+    });
+    
+    // Handle file input change
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                previewImage.src = event.target.result;
+                previewContainer.classList.remove('d-none');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    // Start webcam
+    startWebcamButton.addEventListener('click', async function() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    facingMode: { ideal: 'environment' }
+                }
+            });
+            webcamVideo.srcObject = stream;
+            webcamVideo.play();
+            webcamContainer.classList.remove('d-none');
+            this.classList.add('d-none');
+            closeWebcamButton.classList.remove('d-none');
+            captureImageButton.classList.remove('d-none');
+            
+            webcamAlerts.innerHTML = '';
+        } catch (err) {
+            console.error('Error accessing camera:', err);
+            webcamAlerts.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Camera access denied or not available. Please check your camera permissions or try uploading an image instead.
+                </div>
+            `;
+        }
+    });
+    
+    // Close webcam
+    closeWebcamButton.addEventListener('click', function() {
+        stopWebcam();
+        webcamContainer.classList.add('d-none');
+        startWebcamButton.classList.remove('d-none');
+        this.classList.add('d-none');
+        captureImageButton.classList.add('d-none');
+    });
+    
+    // Capture image from webcam
+    captureImageButton.addEventListener('click', function() {
+        if (stream) {
+            const context = webcamCanvas.getContext('2d');
+            webcamCanvas.width = webcamVideo.videoWidth;
+            webcamCanvas.height = webcamVideo.videoHeight;
+            context.drawImage(webcamVideo, 0, 0, webcamCanvas.width, webcamCanvas.height);
+            
+            const imageDataUrl = webcamCanvas.toDataURL('image/jpeg');
+            webcamImageData.value = imageDataUrl.split(',')[1]; // Remove the data:image/jpeg;base64, part
+            
+            // Show preview
+            previewImage.src = imageDataUrl;
+            previewContainer.classList.remove('d-none');
+        }
+    });
+    
+    // Helper function to stop webcam
+    function stopWebcam() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+    }
+    
+    // Form submission
+    uploadForm.addEventListener('submit', function() {
+        // Show loading spinner
+        uploadBtn.disabled = true;
+        uploadSpinner.classList.remove('d-none');
+    });
+    
+    // Copy analysis to clipboard
+    document.getElementById('copy-analysis').addEventListener('click', function() {
+        const analysisText = document.getElementById('analysis-text');
+        
+        if (analysisText) {
+            // Create a temporary element for copying
+            const tempElement = document.createElement('textarea');
+            tempElement.value = analysisText.innerText;
+            document.body.appendChild(tempElement);
+            tempElement.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempElement);
+            
+            // Show success message
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-check me-1"></i> Copied!';
+            setTimeout(() => {
+                this.innerHTML = originalText;
+            }, 2000);
+        }
+    });
+    
+    // Set material icons based on the material type
+    document.querySelectorAll('.material-icon').forEach(function(icon) {
+        const material = icon.getAttribute('data-material').toLowerCase();
+        let iconClass = 'fas fa-question';
+        
+        switch(material) {
+            case 'plastic':
+                iconClass = 'fas fa-wine-bottle';
+                break;
+            case 'paper':
+                iconClass = 'fas fa-newspaper';
+                break;
+            case 'metal':
+                iconClass = 'fas fa-cog';
+                break;
+            case 'glass':
+                iconClass = 'fas fa-glass-martini';
+                break;
+            case 'electronic':
+                iconClass = 'fas fa-laptop';
+                break;
+            case 'textile':
+                iconClass = 'fas fa-tshirt';
+                break;
+            case 'organic':
+                iconClass = 'fas fa-leaf';
+                break;
+            case 'mixed':
+                iconClass = 'fas fa-random';
+                break;
+        }
+        
+        icon.className = iconClass + ' me-1';
+    });
+</script>
 {% endblock %}

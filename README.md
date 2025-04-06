@@ -187,4 +187,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📧 Contact
 
-Project Link: [https://github.com/yourusername/wasteworks](https://github.com/yourusername/wasteworks)
+Project Link: [https://github.com/yourusername/wasteworks](https://github.com/tether007/wasteworks)

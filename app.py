@@ -23,7 +23,7 @@ login_manager = LoginManager()
 bcrypt = Bcrypt()
 
 # Create the app
-app = Flask(__name__)
+app = Flask(__name__,static_folder='static')
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key")
 
 # Configure the database with better error handling

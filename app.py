@@ -86,7 +86,11 @@ def load_user(user_id):
     from models import User
     return User.query.get(int(user_id))
 
+
 with app.app_context():
-    # Import models to create tables
-    import models
-    db.create_all()
+    try:
+        import models  # import your models first
+        db.create_all()
+        logging.info("Database tables created successfully.")
+    except Exception as e:
+        logging.error(f"Error creating database tables: {str(e)}")

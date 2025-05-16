@@ -59,6 +59,7 @@ class WebcamCapture {
         }
     }
     
+<<<<<<< HEAD
    capture() {
     if (!this.stream) return;
 
@@ -121,6 +122,56 @@ class WebcamCapture {
     }
 }
 
+=======
+    capture() {
+        if (!this.stream) return;
+        
+        const context = this.canvas.getContext('2d');
+        
+        // Set canvas dimensions to match video
+        this.canvas.width = this.video.videoWidth;
+        this.canvas.height = this.video.videoHeight;
+        
+        // Draw the current video frame to the canvas
+        context.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+        
+        // Get the image data from the canvas
+        this.capturedImage = this.canvas.toDataURL('image/jpeg');
+        
+        // Display the image preview
+        const previewContainer = document.getElementById('image-preview-container');
+        const previewImage = document.getElementById('preview-image');
+        
+        if (previewImage && previewContainer) {
+            previewImage.src = this.capturedImage;
+            previewContainer.classList.remove('d-none');
+        }
+        
+        // Add the image data to a hidden input
+        const imageDataInput = document.getElementById('webcam-image-data');
+        if (imageDataInput) {
+            imageDataInput.value = this.capturedImage;
+        }
+        
+        // Stop the webcam
+        this.stop();
+        
+        // Show a success message
+        const captureAlert = document.createElement('div');
+        captureAlert.className = 'alert alert-success mt-2';
+        captureAlert.innerHTML = '<i class="fas fa-check-circle me-2"></i>Image captured successfully. You can now analyze it or retake.';
+        
+        const alertContainer = document.getElementById('webcam-alerts');
+        if (alertContainer) {
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(captureAlert);
+            setTimeout(() => {
+                captureAlert.remove();
+            }, 3000);
+        }
+    }
+    
+>>>>>>> 29a39b63817c010f5cf573453f1150bf94574afe
     stop() {
         if (this.stream) {
             // Stop all tracks in the stream
